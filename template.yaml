@@ -1,0 +1,353 @@
+# This is the SAM template that represents the architecture of your serverless application
+# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-template-basics.html
+
+# The AWSTemplateFormatVersion identifies the capabilities of the template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/format-version-structure.html
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  aethertasks
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    MemorySize: 128
+    Timeout: 100
+    Tracing: Active
+
+Parameters:
+  UserPoolAdminGroupName:
+    Description: User pool group name for API administrators
+    Type: String
+    Default: apiAdmins
+# Transform section specifies one or more macros that AWS CloudFormation uses to process your template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/transform-section-structure.html
+Transform:
+  - AWS::Serverless-2016-10-31
+
+# Resources declares the AWS resources that you want to include in the stack
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+Resources:
+  # Each Lambda function is defined by properties:
+  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+
+  # AuthorizerFunction
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/authorizer.handler
+      Description: Handler for Lambda authorizer
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref UserPool
+          APPLICATION_CLIENT_ID: !Ref UserPoolClient
+          ADMIN_GROUP_NAME: !Ref UserPoolAdminGroupName
+      Tags:
+        Stack: !Sub "${AWS::StackName}"
+
+  # User Pool
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${AWS::StackName}-UserPool
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      AutoVerifiedAttributes:
+        - email
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: email
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+      UsernameAttributes:
+        - email
+      UserPoolTags:
+        Key: Name
+        Value: !Sub ${AWS::StackName} User Pool
+
+  # User Pool Client
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName:
+        !Sub ${AWS::StackName}UserPoolClient
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      GenerateSecret: false
+      PreventUserExistenceErrors: ENABLED
+      RefreshTokenValidity: 30
+      SupportedIdentityProviders:
+        - COGNITO
+      UserPoolId: !Ref UserPool
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - 'code'
+      AllowedOAuthScopes:
+        - 'email'
+        - 'openid'
+      #todo change this!!
+      CallbackURLs:
+        - 'http://localhost'
+
+  # User Pool Domain
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref UserPoolClient
+      UserPoolId: !Ref UserPool
+
+  # API Admin User Pool Group
+  ApiAdministratorsUserPoolGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      Description: User group for API Administrators
+      GroupName: !Ref UserPoolAdminGroupName
+      Precedence: 0
+      UserPoolId: !Ref UserPool
+
+  # Rest API
+  RestAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      # todo : parameterise this
+      StageName: Prod
+      TracingEnabled: true
+      Tags:
+        Name: !Sub "${AWS::StackName}-API"
+        Stack: !Sub "${AWS::StackName}"
+      Auth:
+        DefaultAuthorizer: LambdaTokenAuthorizer
+        Authorizers:
+          LambdaTokenAuthorizer:
+            FunctionArn: !GetAtt AuthorizerFunction.Arn
+            Identity:
+              Headers:
+                - Authorization
+#      AccessLogSetting:
+#        DestinationArn: !GetAtt AccessLogs.Arn
+#        Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "integrationStatus": $context.integrationStatus, "integrationLatency": $context.integrationLatency, "responseLength":"$context.responseLength" }'
+      MethodSettings:
+        - ResourcePath: "/*"
+          LoggingLevel: INFO
+          HttpMethod: "*"
+          DataTraceEnabled: True
+
+  # Task Table
+  TaskTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: TaskTable
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: responsibility
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+      GlobalSecondaryIndexes:
+        - IndexName: ResponsibilityIndex
+          KeySchema:
+            - AttributeName: responsibility
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: StatusIndex
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # User Table
+  UserTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: UserTable
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: EmailIndex
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # Create Task Function
+  CreateTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/tasks/create.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskTable
+      Environment:
+        Variables:
+          TASK_TABLE_NAME: !Ref TaskTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /tasks
+            Method: POST
+
+  # Get Tasks Function
+  GetTasksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/tasks/getTasks.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskTable
+      Environment:
+        Variables:
+          TASK_TABLE_NAME: !Ref TaskTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /tasks
+            Method: GET
+
+  # Get My Tasks Function
+  GetMyTasksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/tasks/getMyTasks.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskTable
+      Environment:
+        Variables:
+          TASK_TABLE_NAME: !Ref TaskTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /tasks/myTasks
+            Method: GET
+
+  # Task Queue
+  TaskQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: TaskQueue
+
+  # Task Assigned Notification Topic
+  TasksAssignedNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: TasksAssignedNotificationTopic
+
+  # Task Deadline Notification Topic
+  TasksDeadlineNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: TasksDeadlineNotificationTopic
+
+  # Closed Task Notification Topic
+  ClosedTasksNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: ClosedTasksNotificationTopic
+
+  # Reopened Task Notification Topic
+  ReopenedTasksNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: ReopenedTasksNotificationTopi
+
+  # Task Stream Processor
+  TaskStreamProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.taskStreamProcessor
+      Policies:
+        - DynamoDBStreamReadPolicy:
+            TableName: TaskTable
+            StreamName: !Select [ 3, !Split [ "/", !GetAtt TaskTable.StreamArn ] ]
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt TaskQueue.QueueName
+      Environment:
+        Variables:
+          TASK_QUEUE_URL: !Ref TaskQueue
+      Events:
+        DynamoDBStreamEvent:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt TaskTable.StreamArn
+            StartingPosition: LATEST
+
+  # Task Queue Processor
+  TaskQueueProcessor:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/notifications/taskQueueProcessor.handler
+      Policies:
+        - SQSPollerPolicy:
+            QueueName: !GetAtt TaskQueue.QueueName
+        - SNSPublishMessagePolicy:
+            TopicName: !Ref TasksAssignedNotificationTopic
+      Environment:
+        Variables:
+          TASK_ASSIGNED_TOPIC_ARN: !Ref TasksAssignedNotificationTopic
+          TASK_CLOSED_TOPIC_ARN: !Ref ClosedTasksNotificationTopic
+          REOPENED_TASK_TOPIC_ARN: !Ref ReopenedTasksNotificationTopic
+      Events:
+        QueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt TaskQueue.Arn
+            BatchSize: 10
+
+
+Outputs:
+  APIEndpoint:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${RestAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+
+  UserPool:
+    Description: Cognito User Pool ID
+    Value: !Ref UserPool
+
+  UserPoolClient:
+    Description: Cognito User Pool Application Client ID
+    Value: !Ref UserPoolClient
+
+  UserPoolAdminGroupName:
+    Description: User Pool group name for API administrators
+    Value: !Ref UserPoolAdminGroupName
+
+  CognitoLoginURL:
+    Description: Cognito User Pool Application Client Hosted Login UI URL
+    Value: !Sub 'https://${UserPoolClient}.auth.${AWS::Region}.amazoncognito.com/login?client_id=${UserPoolClient}&response_type=code&redirect_uri=http://localhost'
+
+  CognitoAuthCommand:
+    Description: AWS CLI command for Amazon Cognito User Pool authentication
+    Value: !Sub 'aws cognito-idp initiate-auth --auth-flow USER_PASSWORD_AUTH --client-id ${UserPoolClient} --auth-parameters USERNAME=<username>,PASSWORD=<password>'
+
+  TaskTable:
+    Description: Tasks Table
+    Value: !Ref TaskTable
+
+  UserTable:
+    Description: User Table
+    Value: !Ref UserTable
