@@ -1,4 +1,4 @@
-import uuid from "uuid";
+import {v7 as uuidv7} from "uuid";
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
 import {DynamoDBDocumentClient, PutCommand} from '@aws-sdk/lib-dynamodb';
 
@@ -15,7 +15,7 @@ export const handler = async (event) => {
     const body = JSON.parse(event.body);
     const {name, description, status, deadline, responsibility, completedAt, userComment} = body
 
-    const id = uuid.v7().toString();
+    const id = uuidv7().toString();
 
     const queryParams = {
         TableName: tableName,
@@ -31,7 +31,7 @@ export const handler = async (event) => {
 
     const response = {
         statusCode: 200,
-        body: JSON.stringify(body)
+        body: JSON.stringify({id, ...body})
     };
 
     console.info(`response from: ${event.path} statusCode: ${response.statusCode} body: ${response.body}`);
