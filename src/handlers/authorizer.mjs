@@ -1,4 +1,4 @@
-import {createRemoteJWKSet, jwtVerify, decodeJwt} from 'jose';
+import {createRemoteJWKSet, jwtVerify} from 'jose';
 
 const USER_POOL_ID = process.env.USER_POOL_ID
 const APP_CLIENT_ID = process.env.APP_CLIENT_ID
@@ -7,18 +7,38 @@ const ADMIN_GROUP_NAME = process.env.ADMIN_GROUP_NAME
 let isColdStart = true;
 let keys = {}
 
+const decodeHeader = (token) => {
+    try {
+        const parts = token.split('.');
+
+        const header = parts[0];
+        const base64 = header.replace(/-/g, '+').replace(/_/g, '/');
+
+        const decoded = atob(base64);
+
+        return JSON.parse(decoded);
+    } catch (error) {
+        console.error('Invalid JWT header:', error);
+        throw error;
+    }
+}
+
 const validateToken = async (token, region) => {
     try {
+        const keysUrl = `https://cognito-idp.${region}.amazonaws.com/${USER_POOL_ID}/.well-known/jwks.json`;
+
         // Load JWKS on cold start
         if (isColdStart) {
-            const keysUrl = `https://cognito-idp.${region}.amazonaws.com/${USER_POOL_ID}/.well-known/jwks.json`;
             const response = await fetch(keysUrl);
             const jwks = await response.json();
             keys = jwks.keys;
             isColdStart = false;
         }
 
-        const unverifiedHeaders = decodeJwt(token).header;
+        const unverifiedHeaders = decodeHeader(token)
+        if (!unverifiedHeaders) {
+            throw new Error('Failed to decode JWT header');
+        }
         const kid = unverifiedHeaders.kid;
 
         const key = keys.find((key) => key.kid === kid);
@@ -28,7 +48,7 @@ const validateToken = async (token, region) => {
         }
 
         // Verify the token signature using the key
-        const JWKS = createRemoteJWKSet(new URL(`https://cognito-idp.${region}.amazonaws.com/${userPoolId}/.well-known/jwks.json`));
+        const JWKS = createRemoteJWKSet(new URL(keysUrl));
         const {payload} = await jwtVerify(token, JWKS, {
             audience: APP_CLIENT_ID, // Verify the audience
         });
@@ -76,6 +96,7 @@ export const handler = async (event, context) => {
     policy.allowMethod(AuthPolicy.HttpVerb.GET, `/users/${principalId}`)
 
     policy.allowMethod(AuthPolicy.HttpVerb.GET, `/tasks/myTasks`)
+    policy.allowMethod(AuthPolicy.HttpVerb.PUT, '/tasks/{id}/complete')
 
     // allow admin only routes
     if ('cognito:groups' in validatedDecodedToken && validatedDecodedToken['cognito:groups'][0] === ADMIN_GROUP_NAME) {
@@ -85,11 +106,17 @@ export const handler = async (event, context) => {
 
         policy.allowMethod(AuthPolicy.HttpVerb.POST, `/tasks`)
         policy.allowMethod(AuthPolicy.HttpVerb.GET, `/tasks`)
+        policy.allowMethod(AuthPolicy.HttpVerb.GET, `/tasks/*`)
         policy.allowMethod(AuthPolicy.HttpVerb.PUT, `/tasks/*`)
 
     }
 
-    return policy.build()
+    const response = {...policy.build()}
+    response.context = {
+        "email": validatedDecodedToken['email']
+    }
+
+    return response
 }
 
 /**

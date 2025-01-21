@@ -1,11 +1,10 @@
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
-import {DynamoDBDocumentClient, PutCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
-import {marshall} from "@aws-sdk/util-dynamodb"
+import {DynamoDBDocumentClient, UpdateCommand} from '@aws-sdk/lib-dynamodb';
 
 const client = new DynamoDBClient({});
 const ddbDocClient = DynamoDBDocumentClient.from(client);
 
-const tableName = process.env.TASKS_TABLE;
+const tableName = process.env.TASK_TABLE_NAME;
 
 export const handler = async (event) => {
     if (event.httpMethod !== "PUT") {
@@ -21,7 +20,7 @@ export const handler = async (event) => {
     try {
         const body = JSON.parse(event.body);
 
-        for (const [key, value] of Object.entries(marshall(body))) {
+        for (const [key, value] of Object.entries(body)) {
             updateExpression += ` #${key} = :${key},`;
             expressionAttributeValues[`:${key}`] = value;
             expressionAttributeNames[`#${key}`] = key;
@@ -33,7 +32,7 @@ export const handler = async (event) => {
         const params = {
             TableName: tableName,
             Key: {
-                id: {S: id},
+                id: id
             },
             UpdateExpression: updateExpression,
             ExpressionAttributeValues: expressionAttributeValues,

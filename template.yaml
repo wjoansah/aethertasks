@@ -1,8 +1,3 @@
-# This is the SAM template that represents the architecture of your serverless application
-# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-template-basics.html
-
-# The AWSTemplateFormatVersion identifies the capabilities of the template
-# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/format-version-structure.html
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   aethertasks
@@ -19,18 +14,22 @@ Parameters:
     Description: User pool group name for API administrators
     Type: String
     Default: apiAdmins
-# Transform section specifies one or more macros that AWS CloudFormation uses to process your template
-# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/transform-section-structure.html
+  DevAuthCallbackUrl:
+    Type: String
+    Description: Auth callback in development
+    Default: http://localhost:3000
+  ProdAuthCallbackUrl:
+    Type: String
+    Description: Auth callback in production
+    Default: http://localhost:3000
+  AdminEmail:
+    Description: Admin email
+    Type: String
 Transform:
   - AWS::Serverless-2016-10-31
 
-# Resources declares the AWS resources that you want to include in the stack
-# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
 Resources:
-  # Each Lambda function is defined by properties:
-  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
-
-  # AuthorizerFunction
+  # Authorizer Function
   AuthorizerFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -39,7 +38,7 @@ Resources:
       Environment:
         Variables:
           USER_POOL_ID: !Ref UserPool
-          APPLICATION_CLIENT_ID: !Ref UserPoolClient
+          APP_CLIENT_ID: !Ref UserPoolClient
           ADMIN_GROUP_NAME: !Ref UserPoolAdminGroupName
       Tags:
         Stack: !Sub "${AWS::StackName}"
@@ -81,6 +80,12 @@ Resources:
       GenerateSecret: false
       PreventUserExistenceErrors: ENABLED
       RefreshTokenValidity: 30
+      AccessTokenValidity: 6
+      IdTokenValidity: 6
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
       SupportedIdentityProviders:
         - COGNITO
       UserPoolId: !Ref UserPool
@@ -90,9 +95,9 @@ Resources:
       AllowedOAuthScopes:
         - 'email'
         - 'openid'
-      #todo change this!!
       CallbackURLs:
-        - 'http://localhost'
+        - !Ref DevAuthCallbackUrl
+        - !Ref ProdAuthCallbackUrl
 
   # User Pool Domain
   UserPoolDomain:
@@ -109,6 +114,53 @@ Resources:
       GroupName: !Ref UserPoolAdminGroupName
       Precedence: 0
       UserPoolId: !Ref UserPool
+
+  # User Function
+  UsersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/users.handler
+      Description: Handler for all users related operations
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref UserPool
+          STATE_MACHINE_ARN: !Ref StepFunctionStateMachine
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action:
+              - cognito-idp:AdminCreateUser
+              - cognito-idp:AdminSetUserPassword
+              - cognito-idp:AdminListGroupsForUser
+              - cognito-idp:ListUsers
+            Resource: !GetAtt UserPool.Arn
+        - Statement:
+            Effect: Allow
+            Action:
+              - states:StartExecution
+            Resource:
+              - !GetAtt StepFunctionStateMachine.Arn
+      Tags:
+        Stack: !Sub "${AWS::StackName}"
+      Events:
+        GetUsersEvent:
+          Type: Api
+          Properties:
+            Path: /users
+            Method: get
+            RestApiId: !Ref RestAPI
+        PostUserEvent:
+          Type: Api
+          Properties:
+            Path: /users/invite
+            Method: post
+            RestApiId: !Ref RestAPI
+        GetUserEvent:
+          Type: Api
+          Properties:
+            Path: /users/{userid}
+            Method: get
+            RestApiId: !Ref RestAPI
 
   # Rest API
   RestAPI:
@@ -128,9 +180,6 @@ Resources:
             Identity:
               Headers:
                 - Authorization
-#      AccessLogSetting:
-#        DestinationArn: !GetAtt AccessLogs.Arn
-#        Format: '{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "integrationStatus": $context.integrationStatus, "integrationLatency": $context.integrationLatency, "responseLength":"$context.responseLength" }'
       MethodSettings:
         - ResourcePath: "/*"
           LoggingLevel: INFO
@@ -169,28 +218,6 @@ Resources:
           Projection:
             ProjectionType: ALL
 
-  # User Table
-  UserTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: UserTable
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-        - AttributeName: email
-          AttributeType: S
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
-      BillingMode: PAY_PER_REQUEST
-      GlobalSecondaryIndexes:
-        - IndexName: EmailIndex
-          KeySchema:
-            - AttributeName: email
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
-
   # Create Task Function
   CreateTaskFunction:
     Type: AWS::Serverless::Function
@@ -208,6 +235,26 @@ Resources:
           Properties:
             Path: /tasks
             Method: POST
+            RestApiId: !Ref RestAPI
+
+  # Create Task Function
+  UpdateTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/tasks/update.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskTable
+      Environment:
+        Variables:
+          TASK_TABLE_NAME: !Ref TaskTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /tasks/{id}
+            Method: PUT
+            RestApiId: !Ref RestAPI
 
   # Get Tasks Function
   GetTasksFunction:
@@ -226,6 +273,7 @@ Resources:
           Properties:
             Path: /tasks
             Method: GET
+            RestApiId: !Ref RestAPI
 
   # Get My Tasks Function
   GetMyTasksFunction:
@@ -244,11 +292,70 @@ Resources:
           Properties:
             Path: /tasks/myTasks
             Method: GET
+            RestApiId: !Ref RestAPI
+
+
+  # Complete Task Function
+  CompleteTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/tasks/completeTask.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TaskTable
+      Environment:
+        Variables:
+          TASK_TABLE_NAME: !Ref TaskTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /tasks/{id}/complete
+            Method: PUT
+            RestApiId: !Ref RestAPI
+
+  StackCompletionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/stackCompletion.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            Effect: Allow
+            Action:
+              - cognito-idp:UpdateUserPool
+              - cognito-idp:AdminCreateUser
+              - cognito-idp:AdminAddUserToGroup
+              - cognito-idp:AdminGetUser
+            Resource: !GetAtt UserPool.Arn
+        - Statement:
+            Effect: Allow
+            Action:
+              - sns:Subscribe
+            Resource:
+              - !Ref CompletedTaskNotificationTopic
+              - !Ref ClosedTasksNotificationTopic
+
+  StackCustomResource:
+    Type: Custom::StackCustomResource
+    Properties:
+      ServiceToken: !GetAtt StackCompletionFunction.Arn
+      ServiceTimeout: 30
+      UserPoolId: !Ref UserPool
+      UserPoolDomain: !Ref UserPoolDomain
+      UserPoolClient: !Ref UserPoolClient
+      ProdFrontendUrl: !Ref ProdAuthCallbackUrl
+      Region: !Ref AWS::Region
+      AdminEmail: !Ref AdminEmail
+      AdminGroup: !Ref UserPoolAdminGroupName
+      TaskCompleteTopicArn: !Ref CompletedTaskNotificationTopic
+      ClosedTaskTopicArn: !Ref ClosedTasksNotificationTopic
 
   # Task Queue
   TaskQueue:
     Type: AWS::SQS::Queue
     Properties:
+      VisibilityTimeout: 120
       QueueName: TaskQueue
 
   # Task Assigned Notification Topic
@@ -273,13 +380,19 @@ Resources:
   ReopenedTasksNotificationTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: ReopenedTasksNotificationTopi
+      TopicName: ReopenedTasksNotificationTopic
+
+  # Task Completed Notification Topic
+  CompletedTaskNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: CompletedTaskNotificationTopic
 
   # Task Stream Processor
   TaskStreamProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: index.taskStreamProcessor
+      Handler: src/handlers/notifications/taskStreamProcessor.handler
       Policies:
         - DynamoDBStreamReadPolicy:
             TableName: TaskTable
@@ -300,23 +413,230 @@ Resources:
   TaskQueueProcessor:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/notifications/taskQueueProcessor.handler
+      Handler: src/handlers/notifications/taskQueueProcessor.handler
       Policies:
         - SQSPollerPolicy:
             QueueName: !GetAtt TaskQueue.QueueName
         - SNSPublishMessagePolicy:
             TopicName: !Ref TasksAssignedNotificationTopic
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            Effect: Allow
+            Action:
+              - sns:Publish
+              - sns:ListSubscriptionsByTopic
+              - sns:GetSubscriptionAttributes
+              - sns:SetSubscriptionAttributes
+            Resource:
+              - !Ref ClosedTasksNotificationTopic
+              - !Ref TasksAssignedNotificationTopic
+              - !Ref ReopenedTasksNotificationTopic
+              - !Ref CompletedTaskNotificationTopic
       Environment:
         Variables:
           TASK_ASSIGNED_TOPIC_ARN: !Ref TasksAssignedNotificationTopic
           TASK_CLOSED_TOPIC_ARN: !Ref ClosedTasksNotificationTopic
           REOPENED_TASK_TOPIC_ARN: !Ref ReopenedTasksNotificationTopic
+          TASK_COMPLETED_ARN: !Ref CompletedTaskNotificationTopic
       Events:
         QueueEvent:
           Type: SQS
           Properties:
             Queue: !GetAtt TaskQueue.Arn
             BatchSize: 10
+
+  # Subscribe to SNS Topics
+  SubscribeToSNSTopicFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/notifications/subscribeToSNSTopics.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            Effect: Allow
+            Action:
+              - sns:Subscribe
+            Resource:
+              - !Ref TasksAssignedNotificationTopic
+              - !Ref TasksDeadlineNotificationTopic
+              - !Ref ClosedTasksNotificationTopic
+              - !Ref ReopenedTasksNotificationTopic
+
+  # Send Deadline Notification Function
+  SendDeadlineNotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/notifications/sendDeadlineNotification.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            Effect: Allow
+            Action:
+              - sns:Publish
+              - sns:ListSubscriptionsByTopic
+              - sns:GetSubscriptionAttributes
+              - sns:SetSubscriptionAttributes
+            Resource:
+              - !Ref ClosedTasksNotificationTopic
+
+  # Step Function Role
+  StepFunctionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: SNSSubscribePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt SubscribeToSNSTopicFunction.Arn
+                  - !GetAtt UpdateTaskFunction.Arn
+                  - !GetAtt SendDeadlineNotificationFunction.Arn
+
+  # Step Function State Machine
+  StepFunctionStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub ${AWS::StackName}-StepFunctionStateMachine
+      RoleArn: !GetAtt StepFunctionsRole.Arn
+      DefinitionString: !Sub |
+        {
+          "StartAt": "DetermineWorkflow",
+          "States": {
+            "DetermineWorkflow": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.workflowType",
+                  "StringEquals": "onboarding",
+                  "Next": "SubscribeToSNS"
+                },
+                {
+                  "Variable": "$.workflowType",
+                  "StringEquals": "taskDeadline",
+                  "Next": "HandleTaskDeadline"
+                }
+              ],
+              "Default": "FailState"
+            },
+            "SubscribeToSNS": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "SubscribeToTasksAssignedTopic",
+                  "States": {
+                    "SubscribeToTasksAssignedTopic": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${SubscribeToSNSTopicFunction}",
+                      "Parameters": {
+                        "TopicArn": "${TasksAssignedNotificationTopic}",
+                        "Email.$": "$.userEmail"
+                      },
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "SubscribeToTasksDeadlineTopic",
+                  "States": {
+                    "SubscribeToTasksDeadlineTopic": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${SubscribeToSNSTopicFunction}",
+                      "Parameters": {
+                        "TopicArn": "${TasksDeadlineNotificationTopic}",
+                        "Email.$": "$.userEmail"
+                      },
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "SubscribeToClosedTasksTopic",
+                  "States": {
+                    "SubscribeToClosedTasksTopic": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${SubscribeToSNSTopicFunction}",
+                      "Parameters": {
+                        "TopicArn": "${ClosedTasksNotificationTopic}",
+                        "Email.$": "$.userEmail"
+                      },
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "SubscribeToReopenedTasksTopic",
+                  "States": {
+                    "SubscribeToReopenedTasksTopic": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${SubscribeToSNSTopicFunction}",
+                      "Parameters": {
+                        "TopicArn": "${ReopenedTasksNotificationTopic}",
+                        "Email.$": "$.userEmail"
+                      },
+                      "End": true
+                    }
+                  }
+                }
+              ],
+              "Next": "SuccessState"
+            },
+            "HandleTaskDeadline": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "UpdateTaskStatus",
+                  "States": {
+                    "UpdateTaskStatus": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${UpdateTaskFunction}",
+                      "Parameters": {
+                        "TaskId.$": "$.taskId",
+                        "Status": "Expired"
+                      },
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "SendDeadlineNotification",
+                  "States": {
+                    "SendDeadlineNotification": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${SendDeadlineNotificationFunction}",
+                      "Parameters": {
+                        "TopicArn": "${ClosedTasksNotificationTopic}",
+                        "TaskId.$": "$.taskId",
+                        "UserEmail.$": "$.assignedTo",
+                        "AdminEmail.$": "$.createdBy"
+                      },
+                      "End": true
+                    }
+                  }
+                }
+              ],
+              "Next": "SuccessState"
+            },
+            "SuccessState": {
+              "Type": "Succeed"
+            },
+            "FailState": {
+              "Type": "Fail",
+              "Error": "InvalidWorkflowType",
+              "Cause": "The workflow type provided is not supported."
+            }
+          }
+        }
 
 
 Outputs:
@@ -347,7 +667,3 @@ Outputs:
   TaskTable:
     Description: Tasks Table
     Value: !Ref TaskTable
-
-  UserTable:
-    Description: User Table
-    Value: !Ref UserTable

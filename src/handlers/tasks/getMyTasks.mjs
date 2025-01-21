@@ -1,23 +1,20 @@
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
 import {DynamoDBDocumentClient, ScanCommand} from '@aws-sdk/lib-dynamodb';
-import * as assert from "node:assert";
 
 const client = new DynamoDBClient({});
 const ddbDocClient = DynamoDBDocumentClient.from(client);
 
-const tableName = process.env.USERS_TABLE;
+const tableName = process.env.TASK_TABLE_NAME;
 
 export const handler = async (event) => {
     if (event.httpMethod !== 'GET') {
         throw new Error(`getMyTasks only accept GET method, you tried: ${event.httpMethod}`);
     }
-
-    const userEmail = event.requestContext.authorizer.claims.email;
-    assert(userEmail);
+    const userEmail = event.requestContext.authorizer.email;
 
     const queryParams = {
         TableName: tableName,
-        FilterExpression: "#responisibility = :email",
+        FilterExpression: "#responsibility = :email",
         ExpressionAttributeNames: {
             "#responsibility": "responsibility"
         },
