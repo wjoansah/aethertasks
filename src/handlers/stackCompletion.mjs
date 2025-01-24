@@ -1,17 +1,16 @@
-const {
+import {
     CognitoIdentityProviderClient,
     AdminGetUserCommand,
     AdminCreateUserCommand,
     AdminAddUserToGroupCommand,
     UpdateUserPoolCommand,
-} = require('@aws-sdk/client-cognito-identity-provider');
-const { SNSClient, SubscribeCommand } = require('@aws-sdk/client-sns');
-import https from 'https'
+} from '@aws-sdk/client-cognito-identity-provider';
+import {SNSClient, SubscribeCommand} from '@aws-sdk/client-sns';
 
 const cognitoClient = new CognitoIdentityProviderClient();
 const snsClient = new SNSClient();
 
-exports.handler = async (event, context) => {
+export const handler = async (event, context) => {
     const responseUrl = event.ResponseURL;
     let status = 'SUCCESS';
     const responseData = {};
@@ -32,6 +31,7 @@ exports.handler = async (event, context) => {
         console.error('Error:', error);
         responseData.Error = error.message;
     } finally {
+        console.log("----------------------SENDING RESPONSE TO CLOUDFORMATION-------------------")
         await sendResponse(responseUrl, event, context, status, responseData);
     }
 };
@@ -54,11 +54,11 @@ const createAdminUser = async (event, userPoolId, responseData, context) => {
         } catch (error) {
             if (error.name === 'UserNotFoundException') {
                 const userAttributes = [
-                    { Name: 'email', Value: adminEmail },
-                    { Name: 'email_verified', Value: 'true' },
+                    {Name: 'email', Value: adminEmail},
+                    {Name: 'email_verified', Value: 'true'},
                 ];
 
-                const temporaryPassword = generateTemporaryPassword(9);
+                const temporaryPassword = generateTemporaryPassword(16);
 
                 await cognitoClient.send(new AdminCreateUserCommand({
                     UserPoolId: userPoolId,
@@ -136,38 +136,50 @@ const sendResponse = async (url, event, context, status, data) => {
         Data: data,
     });
 
-    const parsedUrl = new URL(url);
-    const options = {
-        hostname: parsedUrl.hostname,
-        port: 443,
-        path: parsedUrl.pathname + parsedUrl.search,
-        method: 'PUT',
-        headers: {
-            'Content-Type': '',
-            'Content-Length': responseBody.length,
-        },
-    };
-
-    const request = https.request(options, (response) => {
-        console.log(`Status code: ${response.statusCode}`);
-        console.log(`Status message: ${response.statusMessage}`);
-    });
-
-    request.on('error', (error) => {
-        console.error('sendResponse Error:', error);
-    });
-
-    request.write(responseBody);
-    request.end();
-};
-
-// Function to generate a temporary password
-const generateTemporaryPassword = (length) => {
-    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let password = '';
-    for (let i = 0; i < length; i++) {
-        const randomIndex = Math.floor(Math.random() * charset.length);
-        password += charset[randomIndex];
+    try {
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': '',
+                'Content-Length': responseBody.length,
+            },
+            body: responseBody
+        })
+        if (!response.ok) {
+            console.error(`Failed to send response to CloudFormation: ${response.statusText}`);
+        }
+        console.log(`Status code: ${response.status}`);
+    } catch (e) {
+        console.error('Failed to send response to Cloudformation with error: ', e);
     }
-    return password;
 };
+
+const generateTemporaryPassword = (length) => {
+    return generatePassword(length)
+};
+
+function generatePassword(length) {
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    const symbols = '!@#$%^&*()_+~`|}{[]:;?><,./-=';
+
+    // Ensure the password contains at least one character from each category
+    const allCharacters = uppercase + lowercase + numbers + symbols;
+    let password = [
+        uppercase[Math.floor(Math.random() * uppercase.length)],
+        lowercase[Math.floor(Math.random() * lowercase.length)],
+        numbers[Math.floor(Math.random() * numbers.length)],
+        symbols[Math.floor(Math.random() * symbols.length)],
+    ];
+
+    // Fill the remaining length of the password
+    for (let i = password.length; i < length; i++) {
+        password.push(allCharacters[Math.floor(Math.random() * allCharacters.length)]);
+    }
+
+    // Shuffle the password array to ensure randomness
+    return password
+        .sort(() => Math.random() - 0.5)
+        .join('');
+}
