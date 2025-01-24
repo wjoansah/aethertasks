@@ -11,10 +11,9 @@ export const handler = async (event, context) => {
         throw new Error(`postMethod only accepts PUT method, you tried: ${event.httpMethod} method.`);
     }
 
-    const id = event.pathParameters.id;
+    const {id, userComment} = JSON.parse(event.body);
 
     const status = "completed"
-    const {userComment} = JSON.parse(event.body);
 
     const getParams = {
         TableName: tableName,
