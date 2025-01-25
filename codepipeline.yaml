@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion : '2010-09-09'
+AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   This template deploys a CodePipeline with its required resources.
 
@@ -90,9 +90,9 @@ Parameters:
     Default: ""
 
 Conditions:
-  IsMainBranchPipeline: !Equals [!Ref FeatureGitBranch, ""]
-  IsFeatureBranchPipeline: !Not [Condition: IsMainBranchPipeline]
-  CreateConnection: !Equals [!Ref CodeStarConnectionArn, ""]
+  IsMainBranchPipeline: !Equals [ !Ref FeatureGitBranch, "" ]
+  IsFeatureBranchPipeline: !Not [ Condition: IsMainBranchPipeline ]
+  CreateConnection: !Equals [ !Ref CodeStarConnectionArn, "" ]
 
 Resources:
   #   ____
@@ -131,9 +131,9 @@ Resources:
                 Provider: CodeStarSourceConnection
                 Version: "1"
               Configuration:
-                ConnectionArn: !If [CreateConnection, !Ref CodeStarConnection, !Ref CodeStarConnectionArn]
+                ConnectionArn: !If [ CreateConnection, !Ref CodeStarConnection, !Ref CodeStarConnectionArn ]
                 FullRepositoryId: !Ref FullRepositoryId
-                BranchName: !If [IsFeatureBranchPipeline, !Ref FeatureGitBranch, !Ref MainGitBranch]
+                BranchName: !If [ IsFeatureBranchPipeline, !Ref FeatureGitBranch, !Ref MainGitBranch ]
               OutputArtifacts:
                 - Name: SourceCodeAsZip
               RunOrder: 1
@@ -346,7 +346,7 @@ Resources:
       AccessControl: "LogDeliveryWrite"
       OwnershipControls:
         Rules:
-          - ObjectOwnership:  ObjectWriter
+          - ObjectOwnership: ObjectWriter
       VersioningConfiguration:
         Status: Enabled
       BucketEncryption:
@@ -398,7 +398,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - "codestar-connections:UseConnection"
-                Resource: !If [CreateConnection, !Ref CodeStarConnection, !Ref CodeStarConnectionArn]
+                Resource: !If [ CreateConnection, !Ref CodeStarConnection, !Ref CodeStarConnectionArn ]
         - PolicyName: CodePipelineCodeAndS3Bucket
           PolicyDocument:
             Version: "2012-10-17"
