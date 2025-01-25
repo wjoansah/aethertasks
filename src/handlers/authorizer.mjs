@@ -96,7 +96,7 @@ export const handler = async (event, context) => {
     policy.allowMethod(AuthPolicy.HttpVerb.GET, `/users/${principalId}`)
 
     policy.allowMethod(AuthPolicy.HttpVerb.GET, `/tasks/myTasks`)
-    policy.allowMethod(AuthPolicy.HttpVerb.PUT, '/tasks/{id}/complete')
+    policy.allowMethod(AuthPolicy.HttpVerb.PUT, '/tasks/complete')
 
     // allow admin only routes
     if ('cognito:groups' in validatedDecodedToken && validatedDecodedToken['cognito:groups'][0] === ADMIN_GROUP_NAME) {
