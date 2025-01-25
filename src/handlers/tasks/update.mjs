@@ -27,8 +27,8 @@ export const handler = async (event) => {
         }
 
         if (body.status && body.status === 'completed') {
-            updateExpression += ' #completedAt = :completedTime,';
-            expressionAttributeNames['#completedAt'] = 'completedTime';
+            updateExpression += ' #ca = :completedAt,';
+            expressionAttributeNames['#ca'] = 'completedAt';
             expressionAttributeValues[':completedAt'] = new Date().toISOString();
         }
 
