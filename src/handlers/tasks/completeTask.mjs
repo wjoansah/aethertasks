@@ -1,5 +1,5 @@
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
-import {DynamoDBDocumentClient, PutCommand, ScanCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
+import {DynamoDBDocumentClient, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
 
 const client = new DynamoDBClient({});
 const ddbDocClient = DynamoDBDocumentClient.from(client);
@@ -12,6 +12,7 @@ export const handler = async (event, context) => {
     }
 
     const {id, userComment} = JSON.parse(event.body);
+    console.log('id: ', id, " userComment: ", userComment);
 
     const status = "completed"
 
@@ -21,15 +22,15 @@ export const handler = async (event, context) => {
     }
 
     try {
-        const result = await ddbDocClient.send(new ScanCommand(getParams));
+        const result = await ddbDocClient.send(new GetCommand(getParams));
 
-        if (result.Count === 0) {
+        if (!result.Item) {
             return {
                 statusCode: result['$metadata'].httpStatusCode,
                 body: JSON.stringify({message: "task not found"})
             }
         }
-        if (result.Count === 1 && result.Items[0].responsibility !== event.requestContext.authorizer.email) {
+        if (result.Item.responsibility !== event.requestContext.authorizer.email) {
             return {
                 statusCode: 403,
                 body: {
