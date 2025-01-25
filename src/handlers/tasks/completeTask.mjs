@@ -22,7 +22,14 @@ export const handler = async (event, context) => {
 
     try {
         const result = await ddbDocClient.send(new ScanCommand(getParams));
-        if (result.Attributes.responsibility !== event.requestContext.authorizer.email) {
+
+        if (result.Count === 0) {
+            return {
+                statusCode: result['$metadata'].httpStatusCode,
+                body: JSON.stringify({message: "task not found"})
+            }
+        }
+        if (result.Count === 1 && result.Items[0].responsibility !== event.requestContext.authorizer.email) {
             return {
                 statusCode: 403,
                 body: {
@@ -57,6 +64,7 @@ export const handler = async (event, context) => {
 
     try {
         const result = await ddbDocClient.send(new UpdateCommand(updateParams));
+        console.log('updated result: ', result)
         console.log('Update succeeded:', result.Attributes);
         return result.Attributes;
     } catch (error) {
