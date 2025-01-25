@@ -26,6 +26,12 @@ export const handler = async (event) => {
             expressionAttributeNames[`#${key}`] = key;
         }
 
+        if (body.status && body.status === 'completed') {
+            updateExpression += ' #completedAt = :completedTime,';
+            expressionAttributeNames['#completedAt'] = 'completedTime';
+            expressionAttributeValues[':completedAt'] = new Date().toISOString();
+        }
+
         // Remove trailing comma
         updateExpression = updateExpression.slice(0, -1);
 

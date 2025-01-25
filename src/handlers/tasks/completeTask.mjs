@@ -12,7 +12,6 @@ export const handler = async (event, context) => {
     }
 
     const {id, userComment} = JSON.parse(event.body);
-    console.log('id: ', id, " userComment: ", userComment);
 
     const status = "completed"
 
@@ -51,21 +50,22 @@ export const handler = async (event, context) => {
         Key: {
             id: id,
         },
-        UpdateExpression: 'SET #s = :status, #uc = :comment',
+        UpdateExpression: 'SET #s = :status, #uc = :comment, #ca = :completedAt ',
         ExpressionAttributeNames: {
             '#s': 'status',
             '#uc': 'userComment',
+            '#ca': 'completedAt',
         },
         ExpressionAttributeValues: {
             ':status': status,
             ':comment': userComment,
+            ':completedAt': new Date().toISOString(),
         },
         ReturnValues: 'ALL_NEW', // Returns only the updated attributes
     };
 
     try {
         const result = await ddbDocClient.send(new UpdateCommand(updateParams));
-        console.log('updated result: ', result)
         console.log('Update succeeded:', result.Attributes);
         return result.Attributes;
     } catch (error) {
