@@ -25,8 +25,13 @@ export const handler = async (event, context) => {
                 const response = await cognitoClient.send(command)
                 const users = response.Users
 
-                statusCode = response.statusCode
-                responseBody['body'] = users
+                console.log('users: ', users)
+
+                statusCode = response['$metadata'].httpStatusCode || 200;
+                responseBody = {
+                    message: "List of users retrieved successfully",
+                    users,
+                };
             } catch (err) {
                 statusCode = 500;
                 console.error(err)
@@ -62,7 +67,7 @@ export const handler = async (event, context) => {
 
     return {
         statusCode,
-        body: responseBody,
+        body: JSON.stringify(responseBody),
     }
 }
 
