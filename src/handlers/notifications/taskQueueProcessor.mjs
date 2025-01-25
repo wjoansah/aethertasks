@@ -74,7 +74,7 @@ const buildPublishCommandParams = (eventType, payload) => {
             return {
                 TopicArn: TASK_COMPLETED_ARN,
                 Subject: "Task Updates - Task Completed",
-                Message: `Dear AetherTasks Admin,\n\nThe task "${task.title}" has been marked as completed by {{completerName}}.\n\nCompletion Date: ${task.completedAt}\n\nYou can review the details of this task in your account.\n\nBest regards,\nAetherTasks Management System`,
+                Message: `Dear AetherTasks Admin,\n\nThe task "${task.name}" has been marked as completed by ${task.responsibility}.\n\nCompletion Date: ${task.completedAt}\n\nYou can review the details of this task in your account.\n\nBest regards,\nAetherTasks Management System`,
             }
         default:
             console.warn(`Received an event of type ${eventType} which is not implemented`);
