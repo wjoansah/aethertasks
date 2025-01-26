@@ -1,5 +1,5 @@
 import {DynamoDBClient} from "@aws-sdk/client-dynamodb";
-import {DynamoDBDocumentClient, QueryCommand} from "@aws-sdk/lib-dynamodb";
+import {DynamoDBDocumentClient, ScanCommand} from "@aws-sdk/lib-dynamodb";
 import {SFNClient, StartExecutionCommand} from "@aws-sdk/client-sfn";
 
 const ddbClient = new DynamoDBClient({});
@@ -16,9 +16,9 @@ export const handler = async (event) => {
 
     try {
         const result = await ddbDocClient.send(
-            new QueryCommand({
+            new ScanCommand({
                 TableName: tableName,
-                KeyConditionExpression: "deadline <= :currentTime AND #status = :open",
+                FilterExpression: "deadline <= :currentTime AND #status = :open",
                 ExpressionAttributeNames: {
                     "#status": "status",
                 },

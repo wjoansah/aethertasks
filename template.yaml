@@ -523,7 +523,7 @@ Resources:
         - Statement:
             Effect: Allow
             Action:
-              - "dynamodb:Query"
+              - "dynamodb:Scan"
             Resource:
               - !GetAtt TaskTable.Arn
         - Statement:
@@ -557,7 +557,7 @@ Resources:
         - Statement:
             Effect: Allow
             Action:
-              - "dynamodb:Query"
+              - "dynamodb:Scan"
             Resource:
               - !GetAtt TaskTable.Arn
         - Statement:
