@@ -506,6 +506,75 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: src/handlers/notifications/sendDeadlineNotification.handler
+      Environment:
+        Variables:
+          TASK_TABLE_NAME: !Ref TaskTable
+          TASK_DEADLINE_TOPIC_ARN: !Ref TasksDeadlineNotificationTopic
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            Effect: Allow
+            Action:
+              - sns:Publish
+              - sns:ListSubscriptionsByTopic
+              - sns:GetSubscriptionAttributes
+              - sns:SetSubscriptionAttributes
+            Resource:
+              - !Ref TasksDeadlineNotificationTopic
+      Events:
+        TaskDeadlineEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(10 minutes)
+            Input: "{}"
+
+  # Check expired tasks
+  CheckExpiredTasksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/notifications/checkExpiredTasks.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            Effect: Allow
+            Action:
+              - "dynamodb:Scan"
+            Resource:
+              - !GetAtt TaskTable.Arn
+        - Statement:
+            Effect: Allow
+            Action:
+              - states:StartExecution
+            Resource:
+              - !GetAtt StepFunctionStateMachine.Arn
+      Events:
+        TaskExpiredEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(10 minutes)
+            Input: "{}"
+
+  ExpireTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/notifications/checkExpiredTasks.handler
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            Effect: Allow
+            Action:
+              - "dynamodb:UpdateItem"
+            Resource:
+              - !GetAtt TaskTable.Arn
+
+  SendExpirationNotificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/notifications/sendExpirationNotification.handler
+      Environment:
+        Variables:
+          TASK_CLOSED_TOPIC_ARN: !Ref ClosedTasksNotificationTopic
+          ADMIN_EMAIL: !Ref AdminEmail
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -634,11 +703,11 @@ Resources:
               "Type": "Parallel",
               "Branches": [
                 {
-                  "StartAt": "UpdateTaskStatus",
+                  "StartAt": "ExpireTask",
                   "States": {
-                    "UpdateTaskStatus": {
+                    "ExpireTask": {
                       "Type": "Task",
-                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${UpdateTaskFunction}",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${ExpireTaskFunction}",
                       "Parameters": {
                         "TaskId.$": "$.taskId",
                         "Status": "Expired"
@@ -648,16 +717,15 @@ Resources:
                   }
                 },
                 {
-                  "StartAt": "SendDeadlineNotification",
+                  "StartAt": "SendExpirationNotification",
                   "States": {
-                    "SendDeadlineNotification": {
+                    "SendExpirationNotification": {
                       "Type": "Task",
-                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${SendDeadlineNotificationFunction}",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${SendExpirationNotificationFunction}",
                       "Parameters": {
                         "TopicArn": "${ClosedTasksNotificationTopic}",
                         "TaskId.$": "$.taskId",
-                        "UserEmail.$": "$.assignedTo",
-                        "AdminEmail.$": "$.createdBy"
+                        "Responsibility.$": "$.responsibility"
                       },
                       "End": true
                     }
