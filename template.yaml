@@ -237,6 +237,8 @@ Resources:
           AttributeType: S
         - AttributeName: responsibility
           AttributeType: S
+        - AttributeName: deadline
+          AttributeType: N
       KeySchema:
         - AttributeName: id
           KeyType: HASH
@@ -253,6 +255,12 @@ Resources:
         - IndexName: StatusIndex
           KeySchema:
             - AttributeName: status
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: DeadlineIndex
+          KeySchema:
+            - AttributeName: deadline
               KeyType: HASH
           Projection:
             ProjectionType: ALL
