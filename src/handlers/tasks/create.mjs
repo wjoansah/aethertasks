@@ -14,12 +14,13 @@ export const handler = async (event) => {
 
     const body = JSON.parse(event.body);
     const {name, description, status, deadline, responsibility, completedAt, userComment} = body
+    const deadlineAsNumber = new Date(deadline).getTime();
 
     const id = uuidv7().toString();
 
     const queryParams = {
         TableName: tableName,
-        Item: {id, name, description, status, deadline, responsibility, completedAt, userComment},
+        Item: {id, name, description, status, deadline: deadlineAsNumber, responsibility, completedAt, userComment},
     }
 
     try {

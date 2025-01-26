@@ -25,8 +25,6 @@ export const handler = async (event, context) => {
                 const response = await cognitoClient.send(command)
                 const users = response.Users
 
-                console.log('users: ', users)
-
                 statusCode = response['$metadata'].httpStatusCode || 200;
                 responseBody = {
                     message: "List of users retrieved successfully",

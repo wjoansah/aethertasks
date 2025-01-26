@@ -22,7 +22,7 @@ export const handler = async (event) => {
 
         for (const [key, value] of Object.entries(body)) {
             updateExpression += ` #${key} = :${key},`;
-            expressionAttributeValues[`:${key}`] = value;
+            expressionAttributeValues[`:${key}`] = key === 'deadline' ? new Date(value).getTime() : value;
             expressionAttributeNames[`#${key}`] = key;
         }
 
