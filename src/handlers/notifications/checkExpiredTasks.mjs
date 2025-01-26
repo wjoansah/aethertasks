@@ -11,7 +11,8 @@ const stateMachineArn = process.env.STATE_MACHINE_ARN;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 export const handler = async (event) => {
-    const currentTime = Math.floor(Date.now() / 1000);
+    const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+    console.log("Current time:", currentTime);
 
     try {
         const result = await ddbDocClient.send(
@@ -22,22 +23,40 @@ export const handler = async (event) => {
                     "#status": "status",
                 },
                 ExpressionAttributeValues: {
-                    ":currentTime": currentTime.toString(),
+                    ":currentTime": currentTime,
                     ":open": "open",
                 },
             })
         );
 
-        const expiredTasks = result.Items
+        const expiredTasks = result.Items || [];
+        console.log("Expired tasks found:", expiredTasks);
 
         for (const task of expiredTasks) {
-            await sfnClient.send(new StartExecutionCommand({
-                stateMachineArn: stateMachineArn,
-                input: `{"workflowType":"taskDeadline","taskId":"${task.id}","responsibility":"${task.responsibility}","admin":"${ADMIN_EMAIL}"}`
-            }))
+            try {
+                console.log("Processing task:", task);
+
+                const input = {
+                    workflowType: "taskDeadline",
+                    taskId: task.id,
+                    responsibility: task.responsibility,
+                    adminEmail: ADMIN_EMAIL,
+                };
+
+                await sfnClient.send(
+                    new StartExecutionCommand({
+                        stateMachineArn: stateMachineArn,
+                        input: JSON.stringify(input),
+                    })
+                );
+
+                console.log(`Step Function started for task ID: ${task.id}`);
+            } catch (error) {
+                console.error(`Error starting Step Function for task ID: ${task.id}`, error);
+            }
         }
     } catch (err) {
-        console.error("Error processing expired tasks:", err);
+        console.error("Error scanning expired tasks:", err);
         throw err;
     }
-}
+};
