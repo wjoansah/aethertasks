@@ -533,6 +533,11 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: src/handlers/notifications/checkExpiredTasks.handler
+      Environment:
+        Variables:
+          TASK_TABLE_NAME: !Ref TaskTable
+          STATE_MACHINE_ARN: !Ref StepFunctionStateMachine
+          ADMIN_EMAIL: !Ref AdminEmail
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -558,6 +563,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: src/handlers/notifications/checkExpiredTasks.handler
+      Environment:
+        Variables:
+          TASK_TABLE_NAME: !Ref TaskTable
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
