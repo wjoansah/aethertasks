@@ -523,6 +523,12 @@ Resources:
         - Statement:
             Effect: Allow
             Action:
+              - "dynamodb:Query"
+            Resource:
+              - !GetAtt TaskTable.Arn
+        - Statement:
+            Effect: Allow
+            Action:
               - sns:Publish
               - sns:ListSubscriptionsByTopic
               - sns:GetSubscriptionAttributes
@@ -551,7 +557,7 @@ Resources:
         - Statement:
             Effect: Allow
             Action:
-              - "dynamodb:Scan"
+              - "dynamodb:Query"
             Resource:
               - !GetAtt TaskTable.Arn
         - Statement:
@@ -570,7 +576,7 @@ Resources:
   ExpireTaskFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: src/handlers/notifications/checkExpiredTasks.handler
+      Handler: src/handlers/tasks/expireTask.handler
       Environment:
         Variables:
           TASK_TABLE_NAME: !Ref TaskTable
