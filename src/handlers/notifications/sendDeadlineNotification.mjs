@@ -19,7 +19,7 @@ export const handler = async (event) => {
         const result = await ddbDocClient.send(
             new QueryCommand({
                 TableName: tableName,
-                FilterExpression: "deadline BETWEEN :now AND :oneHourLater AND #status = :open",
+                KeyConditionExpression: "deadline BETWEEN :now AND :oneHourLater AND #status = :open",
                 ExpressionAttributeNames: {
                     "#status": "status",
                 },

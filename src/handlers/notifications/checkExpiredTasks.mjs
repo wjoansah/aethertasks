@@ -18,7 +18,7 @@ export const handler = async (event) => {
         const result = await ddbDocClient.send(
             new QueryCommand({
                 TableName: tableName,
-                FilterExpression: "deadline <= :currentTime AND #status = :open",
+                KeyConditionExpression: "deadline <= :currentTime AND #status = :open",
                 ExpressionAttributeNames: {
                     "#status": "status",
                 },
