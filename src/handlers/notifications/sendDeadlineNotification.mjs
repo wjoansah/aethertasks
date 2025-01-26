@@ -1,6 +1,6 @@
 import {SNSClient, PublishCommand} from "@aws-sdk/client-sns";
-import {DynamoDBClient, QueryCommand} from "@aws-sdk/client-dynamodb";
-import {DynamoDBDocumentClient} from "@aws-sdk/lib-dynamodb";
+import {DynamoDBClient} from "@aws-sdk/client-dynamodb";
+import {DynamoDBDocumentClient, QueryCommand} from "@aws-sdk/lib-dynamodb";
 
 const snsClient = new SNSClient();
 const ddbClient = new DynamoDBClient();
