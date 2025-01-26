@@ -28,6 +28,7 @@ export const handler = async (event) => {
                 },
             })
         );
+        console.log('result: ', result)
 
         const expiredTasks = result.Items || [];
         console.log("Expired tasks found:", expiredTasks);
