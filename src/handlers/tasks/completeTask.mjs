@@ -1,5 +1,5 @@
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
-import {DynamoDBDocumentClient, PutCommand, ScanCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
+import {DynamoDBDocumentClient, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb';
 
 const client = new DynamoDBClient({});
 const ddbDocClient = DynamoDBDocumentClient.from(client);
@@ -21,8 +21,15 @@ export const handler = async (event, context) => {
     }
 
     try {
-        const result = await ddbDocClient.send(new ScanCommand(getParams));
-        if (result.Attributes.responsibility !== event.requestContext.authorizer.email) {
+        const result = await ddbDocClient.send(new GetCommand(getParams));
+
+        if (!result.Item) {
+            return {
+                statusCode: result['$metadata'].httpStatusCode,
+                body: JSON.stringify({message: "task not found"})
+            }
+        }
+        if (result.Item.responsibility !== event.requestContext.authorizer.email) {
             return {
                 statusCode: 403,
                 body: {
@@ -43,14 +50,16 @@ export const handler = async (event, context) => {
         Key: {
             id: id,
         },
-        UpdateExpression: 'SET #s = :status, #uc = :comment',
+        UpdateExpression: 'SET #s = :status, #uc = :comment, #ca = :completedAt ',
         ExpressionAttributeNames: {
             '#s': 'status',
             '#uc': 'userComment',
+            '#ca': 'completedAt',
         },
         ExpressionAttributeValues: {
             ':status': status,
             ':comment': userComment,
+            ':completedAt': new Date().toISOString(),
         },
         ReturnValues: 'ALL_NEW', // Returns only the updated attributes
     };

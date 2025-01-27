@@ -22,8 +22,14 @@ export const handler = async (event) => {
 
         for (const [key, value] of Object.entries(body)) {
             updateExpression += ` #${key} = :${key},`;
-            expressionAttributeValues[`:${key}`] = value;
+            expressionAttributeValues[`:${key}`] = key === 'deadline' ? new Date(value).getTime() : value;
             expressionAttributeNames[`#${key}`] = key;
+        }
+
+        if (body.status && body.status === 'completed') {
+            updateExpression += ' #ca = :completedAt,';
+            expressionAttributeNames['#ca'] = 'completedAt';
+            expressionAttributeValues[':completedAt'] = new Date().toISOString();
         }
 
         // Remove trailing comma
