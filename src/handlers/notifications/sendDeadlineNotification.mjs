@@ -12,8 +12,8 @@ const taskDeadlineTopicArn = process.env.TASK_DEADLINE_TOPIC_ARN;
 export const handler = async (event) => {
     console.log("Event received:", event);
 
-    const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
-    const oneHourLater = currentTime + 3600;
+    const currentTime = Date.now();
+    const oneHourLater = currentTime + 3600 * 1000; // plus 1 hr
 
     try {
         const result = await ddbDocClient.send(

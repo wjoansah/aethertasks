@@ -11,7 +11,7 @@ const stateMachineArn = process.env.STATE_MACHINE_ARN;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 export const handler = async (event) => {
-    const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+    const currentTime = Date.now()
     console.log("Current time:", currentTime);
 
     try {
