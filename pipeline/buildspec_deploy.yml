@@ -16,4 +16,4 @@ phases:
                     --s3-bucket ${ENV_BUCKET}
                     --no-fail-on-empty-changeset
                     --role-arn ${ENV_CLOUDFORMATION_EXECUTION_ROLE}
-                    --parameter-overrides AdminEmail="${ADMIN_EMAIL}"
+                    --parameter-overrides AdminEmail="${ADMIN_EMAIL}" ProdAuthCallbackUrl=https://main.d2gcjjqysm3za9.amplifyapp.com
