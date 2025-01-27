@@ -630,8 +630,9 @@ Resources:
                   - lambda:InvokeFunction
                 Resource:
                   - !GetAtt SubscribeToSNSTopicFunction.Arn
-                  - !GetAtt UpdateTaskFunction.Arn
+                  - !GetAtt ExpireTaskFunction.Arn
                   - !GetAtt SendDeadlineNotificationFunction.Arn
+                  - !GetAtt SendExpirationNotificationFunction.Arn
 
   # Step Function State Machine
   StepFunctionStateMachine:
