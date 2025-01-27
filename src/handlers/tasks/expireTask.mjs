@@ -7,7 +7,8 @@ const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
 const tableName = process.env.TASK_TABLE_NAME;
 
 export const handler = async (event) => {
-    const id = event.taskId;
+    console.log(event)
+    const id = event.TaskId;
 
     console.log(`updating status of task with id ${id} to expired...`);
 
