@@ -48,11 +48,11 @@ const buildPublishCommandParams = (eventType, payload) => {
     switch (eventType) {
         case "task.open":
             let subject = "Task Updates"
-            let message = `Task Details:\nName: ${task.name}\nDeadline: ${task.deadline}`
+            let message = `Task Details:\nName: ${task.name}\nDeadline: ${new Date(task.deadline).toLocaleString()}`
 
             if (operation === "INSERT") {
                 subject = "New Task Assigned";
-                message = `Hello ${task.responsibility},\n\nYou have been assigned a new task: "${task.name}".\n\nDescription: ${task.description}\nDue Date: ${task.deadline}\n\nPlease log in to your account to view and manage this task.\n\nBest regards,\nAetherTasks Management System`;
+                message = `Hello ${task.responsibility},\n\nYou have been assigned a new task: "${task.name}".\n\nDescription: ${task.description}\nDue Date: ${new Date(task.deadline).toLocaleString()}\n\nPlease log in to your account to view and manage this task.\n\nBest regards,\nAetherTasks Management System`;
             }
 
             if (statusHasChanged(task, oldTask) && oldTask.status === "closed") {
