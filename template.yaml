@@ -244,7 +244,7 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
       StreamSpecification:
-        StreamViewType: NEW_IMAGE
+        StreamViewType: NEW_AND_OLD_IMAGES
       GlobalSecondaryIndexes:
         - IndexName: ResponsibilityIndex
           KeySchema:
