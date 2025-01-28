@@ -40,6 +40,7 @@ export const handler = async (event) => {
                 const input = {
                     workflowType: "taskDeadline",
                     taskId: task.id,
+                    taskName: task.name,
                     responsibility: task.responsibility,
                     adminEmail: ADMIN_EMAIL,
                 };
@@ -51,9 +52,9 @@ export const handler = async (event) => {
                     })
                 );
 
-                console.log(`Step Function started for task ID: ${task.id}`);
+                console.log(`Step Function started for task ID: ${task.id}, name: ${task.name}`);
             } catch (error) {
-                console.error(`Error starting Step Function for task ID: ${task.id}`, error);
+                console.error(`Error starting Step Function for task ID: ${task.id}, name: ${task.name}`, error);
             }
         }
     } catch (err) {

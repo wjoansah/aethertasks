@@ -646,7 +646,7 @@ Resources:
           "States": {
             "DetermineWorkflow": {
               "Type": "Choice",
-              "Choices": [
+              "Choices": 
                 {
                   "Variable": "$.workflowType",
                   "StringEquals": "onboarding",
@@ -732,8 +732,7 @@ Resources:
                       "Type": "Task",
                       "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${ExpireTaskFunction}",
                       "Parameters": {
-                        "TaskId.$": "$.taskId",
-                        "Status": "Expired"
+                        "TaskId.$": "$.taskId"
                       },
                       "End": true
                     }
@@ -748,6 +747,7 @@ Resources:
                       "Parameters": {
                         "TopicArn": "${ClosedTasksNotificationTopic}",
                         "TaskId.$": "$.taskId",
+                        "TaskName.$": "$.taskName",
                         "Responsibility.$": "$.responsibility"
                       },
                       "End": true
