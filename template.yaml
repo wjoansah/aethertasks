@@ -656,7 +656,7 @@ Resources:
           "States": {
             "DetermineWorkflow": {
               "Type": "Choice",
-              "Choices": 
+              "Choices": [
                 {
                   "Variable": "$.workflowType",
                   "StringEquals": "onboarding",
