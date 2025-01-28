@@ -113,6 +113,16 @@ Resources:
     Properties:
       Domain: !Ref UserPoolClient
       UserPoolId: !Ref UserPool
+      ManagedLoginVersion: "2"
+
+
+  BrandedLogin:
+    Type: AWS::Cognito::ManagedLoginBranding
+    Properties:
+      ClientId: !Ref UserPoolClient
+      UserPoolId: !Ref UserPool
+      UseCognitoProvidedValues: true
+
 
   # API Admin User Pool Group
   ApiAdministratorsUserPoolGroup:
