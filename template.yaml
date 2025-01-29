@@ -187,6 +187,15 @@ Resources:
       # todo : parameterise this
       StageName: Prod
       TracingEnabled: true
+      Cors:
+        AllowCredentials: true
+        AllowMethods:
+          - 'GET'
+          - 'PUT'
+          - 'POST'
+          - 'OPTIONS'
+        AllowOrigin:
+          Fn::Sub: "'${DevAuthCallbackUrl},${ProdAuthCallbackUrl}'"
       Tags:
         Name: !Sub "${AWS::StackName}-API"
         Stack: !Sub "${AWS::StackName}"
