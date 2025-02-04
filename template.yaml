@@ -119,6 +119,11 @@ Resources:
       UserPoolId: !Ref UserPool
       ManagedLoginVersion: "2"
 
+  UserPoolLambdaConfig:
+    Type: AWS::Cognito::UserPoolLambdaConfig
+    Properties:
+      UserPoolId: !Ref UserPool
+      PostConfirmation: !GetAtt CognitoPostConfirmationFunction.Arn
 
   BrandedLogin:
     Type: AWS::Cognito::ManagedLoginBranding
