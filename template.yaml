@@ -67,8 +67,6 @@ Resources:
           Required: false
       UsernameAttributes:
         - email
-      LambdaConfig:
-        PostConfirmation: !GetAtt CognitoPostConfirmationFunction.Arn
       UserPoolTags:
         Key: Name
         Value: !Sub ${AWS::StackName} User Pool
