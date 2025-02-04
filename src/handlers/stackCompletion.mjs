@@ -56,6 +56,7 @@ const createAdminUser = async (event, userPoolId, responseData, context) => {
                 const userAttributes = [
                     {Name: 'email', Value: adminEmail},
                     {Name: 'email_verified', Value: 'true'},
+                    {Name: 'role', Value: 'admin'},
                 ];
 
                 const temporaryPassword = generateTemporaryPassword(16);

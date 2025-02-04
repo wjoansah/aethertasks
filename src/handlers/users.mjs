@@ -5,13 +5,10 @@ import {
     DeliveryMediumType,
     ListUsersCommand
 } from '@aws-sdk/client-cognito-identity-provider'
-import {SFNClient, StartExecutionCommand} from "@aws-sdk/client-sfn";
 
 const cognitoClient = new CognitoIdentityProviderClient({})
-const sfnClient = new SFNClient({});
 
 const USER_POOL_ID = process.env.USER_POOL_ID
-const STATE_MACHINE_ARN = process.env.STATE_MACHINE_ARN
 
 export const handler = async (event, context) => {
     const routeKey = `${event['httpMethod']} ${event['resource']}`;
@@ -38,7 +35,7 @@ export const handler = async (event, context) => {
 
         if (routeKey === "POST /users/invite") {
             const body = JSON.parse(event.body);
-            const {name, email} = body
+            const {name, email, role} = body
 
             const createUserRequest = {
                 UserPoolId: USER_POOL_ID,
@@ -46,12 +43,11 @@ export const handler = async (event, context) => {
                 UserAttributes:
                     [{Name: "name", Value: name},
                         {Name: "email", Value: email},
+                        {Name: "role", Value: role},
                         {Name: "email_verified", Value: "true"}],
                 TemporaryUserAttributes: generateTemporaryPassword(),
                 DesiredDeliveryMediums: [DeliveryMediumType.EMAIL]
             }
-
-            await startUserOnboarding(email)
 
             responseBody = await cognitoClient.send(new AdminCreateUserCommand(createUserRequest))
             statusCode = 201;
@@ -71,19 +67,4 @@ export const handler = async (event, context) => {
 
 const generateTemporaryPassword = () => {
     return crypto.randomBytes(16).toString("hex")
-}
-
-const startUserOnboarding = async (userEmail) => {
-    const input = `{"workflowType":"onboarding","userEmail":"${userEmail}"}"}`
-    const params = {
-        stateMachineArn: STATE_MACHINE_ARN,
-        input
-    }
-    const command = new StartExecutionCommand(params)
-
-    try {
-        await sfnClient.send(command)
-    } catch (error) {
-        console.error(error)
-    }
 }
