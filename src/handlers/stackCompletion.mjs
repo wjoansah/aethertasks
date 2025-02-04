@@ -40,9 +40,6 @@ export const handler = async (event, context) => {
 
 const createAdminUser = async (event, userPoolId, responseData, context) => {
     const adminEmail = event.ResourceProperties.AdminEmail;
-    const adminGroup = event.ResourceProperties.AdminGroup;
-    const closedTaskTopicArn = event.ResourceProperties.ClosedTaskTopicArn;
-    const taskCompleteTopicArn = event.ResourceProperties.TaskCompleteTopicArn;
 
     if (adminEmail && adminEmail.trim() !== 'None') {
         try {
@@ -58,7 +55,7 @@ const createAdminUser = async (event, userPoolId, responseData, context) => {
                 const userAttributes = [
                     {Name: 'email', Value: adminEmail},
                     {Name: 'email_verified', Value: 'true'},
-                    {Name: 'role', Value: 'admin'},
+                    {Name: 'custom:role', Value: 'admin'},
                 ];
 
                 const temporaryPassword = generateTemporaryPassword(16);
@@ -70,15 +67,6 @@ const createAdminUser = async (event, userPoolId, responseData, context) => {
                     TemporaryPassword: temporaryPassword,
                     DesiredDeliveryMediums: ['EMAIL'],
                 }));
-
-                await cognitoClient.send(new AdminAddUserToGroupCommand({
-                    UserPoolId: userPoolId,
-                    Username: adminEmail,
-                    GroupName: adminGroup,
-                }));
-
-                await subscribeToTopic(closedTaskTopicArn, adminEmail);
-                await subscribeToTopic(taskCompleteTopicArn, adminEmail);
 
                 console.log('Admin created successfully');
                 responseData.Message = 'Admin created successfully';

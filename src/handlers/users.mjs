@@ -43,7 +43,7 @@ export const handler = async (event, context) => {
                 UserAttributes:
                     [{Name: "name", Value: name},
                         {Name: "email", Value: email},
-                        {Name: "role", Value: role},
+                        {Name: "custom:role", Value: role},
                         {Name: "email_verified", Value: "true"}],
                 TemporaryUserAttributes: generateTemporaryPassword(),
                 DesiredDeliveryMediums: [DeliveryMediumType.EMAIL]
