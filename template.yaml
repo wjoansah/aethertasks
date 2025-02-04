@@ -146,7 +146,6 @@ Resources:
       Environment:
         Variables:
           ADMIN_GROUP_NAME: !Ref UserPoolAdminGroupName
-          USER_POOL_ID: !Ref UserPool
           STATE_MACHINE_ARN: !Ref StepFunctionStateMachine
       Policies:
         - Statement:

@@ -16,7 +16,7 @@ export const handler = async (event) => {
 
         if (role === 'admin') {
             await cognitoClient.send(new AdminAddUserToGroupCommand({
-                UserPoolId: USER_POOL_ID,
+                UserPoolId: event.UserPoolId,
                 Username: email,
                 GroupName: ADMIN_GROUP_NAME,
             }));
