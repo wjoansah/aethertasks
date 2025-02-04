@@ -6,7 +6,6 @@ const cognitoClient = new CognitoIdentityProviderClient();
 
 const ADMIN_GROUP_NAME = process.env.ADMIN_GROUP_Name
 const STATE_MACHINE_ARN = process.env.STATE_MACHINE_ARN
-const USER_POOL_ID = process.env.USER_POOL_ID
 
 export const handler = async (event) => {
     const {role, email} = event.request.Attributes
