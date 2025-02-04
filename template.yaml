@@ -735,7 +735,8 @@ Resources:
                     }
                   }
                 }
-              ]
+              ],
+              "Next": "SuccessState"
             },
             "SubscribeToSNS": {
               "Type": "Parallel",
