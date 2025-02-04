@@ -22,9 +22,11 @@ export const handler = async (event, context) => {
         }
 
         const userPoolId = event.ResourceProperties.UserPoolId;
+        const postConfirmationFuncArn = event.ResourceProperties.PostConfirmationFuncArn
 
         await addInviteMessageTemplate(event, userPoolId, responseData, context);
         await createAdminUser(event, userPoolId, responseData, context);
+        await updateUserPoolLambdaConfig(userPoolId, postConfirmationFuncArn, responseData);
 
     } catch (error) {
         status = 'FAILED';
@@ -94,6 +96,21 @@ const subscribeToTopic = async (topicArn, endpoint) => {
         Endpoint: endpoint,
     }));
 };
+
+const updateUserPoolLambdaConfig = async (userPoolId, postConfirmationFuncArn, responseData) => {
+
+    await cognitoClient.send(new UpdateUserPoolCommand(
+        {
+            UserPoolId: userPoolId,
+            LambdaConfig: {
+                PostConfirmation: postConfirmationFuncArn
+            }
+        }
+    ))
+
+    console.log('UserPool Lambda config updated successfully');
+    responseData.Message = 'UserPool Lambda config updated successfully';
+}
 
 const addInviteMessageTemplate = async (event, userPoolId, responseData, context) => {
     const domain = event.ResourceProperties.UserPoolDomain;

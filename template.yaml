@@ -119,12 +119,6 @@ Resources:
       UserPoolId: !Ref UserPool
       ManagedLoginVersion: "2"
 
-  UserPoolLambdaConfig:
-    Type: AWS::Cognito::UserPoolLambdaConfig
-    Properties:
-      UserPoolId: !Ref UserPool
-      PostConfirmation: !GetAtt CognitoPostConfirmationFunction.Arn
-
   BrandedLogin:
     Type: AWS::Cognito::ManagedLoginBranding
     Properties:
@@ -440,6 +434,7 @@ Resources:
       AdminGroup: !Ref UserPoolAdminGroupName
       TaskCompleteTopicArn: !Ref CompletedTaskNotificationTopic
       ClosedTaskTopicArn: !Ref ClosedTasksNotificationTopic
+      PostConfirmationFuncArn: !GetAtt CognitoPostConfirmationFunction.Arn
 
   # Task Queue
   TaskQueue:
