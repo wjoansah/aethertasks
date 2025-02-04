@@ -49,7 +49,7 @@ Resources:
     Properties:
       UserPoolName: !Sub ${AWS::StackName}-UserPool
       AdminCreateUserConfig:
-        AllowAdminCreateUserOnly: false
+        AllowAdminCreateUserOnly: true
       AutoVerifiedAttributes:
         - email
       Schema:
@@ -61,6 +61,10 @@ Resources:
           AttributeDataType: String
           Mutable: true
           Required: true
+        - Name: role
+          AttributeDataType: String
+          Mutable: true
+          Required: false
       UsernameAttributes:
         - email
       UserPoolTags:
