@@ -67,6 +67,8 @@ Resources:
           Required: false
       UsernameAttributes:
         - email
+      LambdaConfig:
+        PostConfirmation: !GetAtt CognitoPostConfirmationFunction.Arn
       UserPoolTags:
         Key: Name
         Value: !Sub ${AWS::StackName} User Pool
@@ -137,6 +139,28 @@ Resources:
       Precedence: 0
       UserPoolId: !Ref UserPool
 
+  CognitoPostConfirmationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/cognitoPostConfirmation.handler
+      Environment:
+        Variables:
+          ADMIN_GROUP_NAME: !Ref UserPoolAdminGroupName
+          USER_POOL_ID: !Ref UserPool
+          STATE_MACHINE_ARN: !Ref StepFunctionStateMachine
+      Policies:
+        - Statement:
+            Effect: Allow
+            Action:
+              - cognito-idp:AdminListGroupsForUser
+            Resource: !GetAtt UserPool.Arn
+        - Statement:
+            Effect: Allow
+            Action:
+              - states:StartExecution
+            Resource:
+              - !GetAtt StepFunctionStateMachine.Arn
+
   # User Function
   UsersFunction:
     Type: AWS::Serverless::Function
@@ -156,12 +180,6 @@ Resources:
               - cognito-idp:AdminListGroupsForUser
               - cognito-idp:ListUsers
             Resource: !GetAtt UserPool.Arn
-        - Statement:
-            Effect: Allow
-            Action:
-              - states:StartExecution
-            Resource:
-              - !GetAtt StepFunctionStateMachine.Arn
       Tags:
         Stack: !Sub "${AWS::StackName}"
       Events:
@@ -531,6 +549,7 @@ Resources:
               - !Ref TasksDeadlineNotificationTopic
               - !Ref ClosedTasksNotificationTopic
               - !Ref ReopenedTasksNotificationTopic
+              - !Ref CompletedTaskNotificationTopic
 
   # Send Deadline Notification Function
   SendDeadlineNotificationFunction:
@@ -679,9 +698,47 @@ Resources:
                   "Variable": "$.workflowType",
                   "StringEquals": "taskDeadline",
                   "Next": "HandleTaskDeadline"
+                },
+                {
+                  "Variable": "$.workflowType",
+                  "StringEquals": "admin-onboarding",
+                  "Next": "SubscribeToAdminTopics"
                 }
               ],
               "Default": "FailState"
+            },
+            "SubscribeToAdminTopics": {
+              "Type": "Parallel",
+              "Branches": [
+                {
+                  "StartAt": "SubscribeToClosedTaskTopic",
+                  "States": {
+                    "SubscribeToClosedTaskTopic": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${SubscribeToSNSTopicFunction}",
+                      "Parameters": {
+                        "TopicArn": "${ClosedTasksNotificationTopic}",
+                        "Email.$": "$.userEmail"
+                      },
+                      "End": true
+                    }
+                  }
+                },
+                {
+                  "StartAt": "SubscribeToCompletedTaskTopic",
+                  "States": {
+                    "SubscribeToCompletedTaskTopic": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${SubscribeToSNSTopicFunction}",
+                      "Parameters": {
+                        "TopicArn": "${CompletedTaskNotificationTopic}",
+                        "Email.$": "$.userEmail"
+                      },
+                      "End": true
+                    }
+                  }
+                }
+              ]
             },
             "SubscribeToSNS": {
               "Type": "Parallel",
