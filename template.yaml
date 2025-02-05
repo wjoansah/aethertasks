@@ -138,14 +138,9 @@ Resources:
       Precedence: 0
       UserPoolId: !Ref UserPool
 
-  CognitoPostConfirmationFunction:
-    Type: AWS::Serverless::Function
+  CognitoPostConfirmationFunctionRole:
+    Type: AWS::IAM::Role
     Properties:
-      Handler: src/cognitoPostConfirmation.handler
-      Environment:
-        Variables:
-          ADMIN_GROUP_NAME: !Ref UserPoolAdminGroupName
-          STATE_MACHINE_ARN: !Ref StepFunctionStateMachine
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -155,19 +150,34 @@ Resources:
             Action:
               sts:AssumeRole
       Policies:
-        - AWSLambdaBasicExecutionRole
-        - Statement:
-            Effect: Allow
-            Action:
-              - cognito-idp:AdminAddUserToGroup
-              - cognito-idp:AdminListGroupsForUser
-            Resource: !GetAtt UserPool.Arn
-        - Statement:
-            Effect: Allow
-            Action:
-              - states:StartExecution
-            Resource:
-              - !GetAtt StepFunctionStateMachine.Arn
+        - PolicyName: CognitoUserGroupPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cognito-idp:AdminAddUserToGroup
+                  - cognito-idp:AdminListGroupsForUser
+                Resource: !GetAtt UserPool.Arn
+        - PolicyName: CognitoUserGroupPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                Resource:
+                  - !GetAtt StepFunctionStateMachine.Arn
+
+  CognitoPostConfirmationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/cognitoPostConfirmation.handler
+      Role: !GetAtt CognitoPostConfirmationFunctionRole.Arn
+      Environment:
+        Variables:
+          ADMIN_GROUP_NAME: !Ref UserPoolAdminGroupName
+          STATE_MACHINE_ARN: !Ref StepFunctionStateMachine
 
   # User Function
   UsersFunction:
