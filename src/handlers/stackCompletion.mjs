@@ -19,11 +19,9 @@ export const handler = async (event, context) => {
         }
 
         const userPoolId = event.ResourceProperties.UserPoolId;
-        const postConfirmationFuncArn = event.ResourceProperties.PostConfirmationFuncArn
 
-        await addInviteMessageTemplate(event, userPoolId, responseData, context);
+        await updateUserPoolConfig(event, responseData)
         await createAdminUser(event, userPoolId, responseData, context);
-        await updateUserPoolLambdaConfig(userPoolId, postConfirmationFuncArn, responseData);
 
     } catch (error) {
         status = 'FAILED';
@@ -74,22 +72,10 @@ const createAdminUser = async (event, userPoolId, responseData, context) => {
     }
 };
 
-const updateUserPoolLambdaConfig = async (userPoolId, postConfirmationFuncArn, responseData) => {
+const updateUserPoolConfig = async (event, responseData) => {
+    const userPoolId = event.ResourceProperties.UserPoolId;
+    const postConfirmationFuncArn = event.ResourceProperties.PostConfirmationFuncArn
 
-    await cognitoClient.send(new UpdateUserPoolCommand(
-        {
-            UserPoolId: userPoolId,
-            LambdaConfig: {
-                PostConfirmation: postConfirmationFuncArn
-            }
-        }
-    ))
-
-    console.log('UserPool Lambda config updated successfully');
-    responseData.Message = 'UserPool Lambda config updated successfully';
-}
-
-const addInviteMessageTemplate = async (event, userPoolId, responseData, context) => {
     const domain = event.ResourceProperties.UserPoolDomain;
     const clientId = event.ResourceProperties.UserPoolClient;
     const frontendHost = event.ResourceProperties.ProdFrontendUrl;
@@ -99,10 +85,15 @@ const addInviteMessageTemplate = async (event, userPoolId, responseData, context
 \n\n
 Your temporary password is {####}
 \n\n
-Click here to sign in:\n\n
+Click here to sign in:
+\n\n
 https://${domain}.auth.${region}.amazoncognito.com/login?client_id=${clientId}&response_type=code&redirect_uri=${frontendHost}
 \n\n
-Ensure to subscribe to the SNS topics`;
+Ensure to subscribe to the SNS topics
+\n\n
+Best Regards,
+AetherTasks Team.
+`;
 
     await cognitoClient.send(new UpdateUserPoolCommand({
         UserPoolId: userPoolId,
@@ -113,11 +104,14 @@ Ensure to subscribe to the SNS topics`;
                 EmailSubject: 'Welcome to AetherTasks!',
             },
         },
-    }));
+        LambdaConfig: {
+            PostConfirmation: postConfirmationFuncArn
+        }
+    }))
 
-    console.log('UserPool Invite Message updated successfully');
-    responseData.Message = 'UserPool Invite Message updated successfully';
-};
+    console.log('UserPool Config updated successfully');
+    responseData.Message = 'UserPool Config updated successfully';
+}
 
 // Function to send a response back to CloudFormation
 const sendResponse = async (url, event, context, status, data) => {
