@@ -8,7 +8,7 @@ const ADMIN_GROUP_NAME = process.env.ADMIN_GROUP_Name
 const STATE_MACHINE_ARN = process.env.STATE_MACHINE_ARN
 
 export const handler = async (event) => {
-    const {role, email} = event.request.Attributes
+    const {'custom:role': role, email} = event.request.Attributes
 
     try {
         await startUserOnboarding(role, email);
