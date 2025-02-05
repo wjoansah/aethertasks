@@ -146,7 +146,16 @@ Resources:
         Variables:
           ADMIN_GROUP_NAME: !Ref UserPoolAdminGroupName
           STATE_MACHINE_ARN: !Ref StepFunctionStateMachine
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cognito-idp.amazonaws.com
+            Action:
+              sts:AssumeRole
       Policies:
+        - AWSLambdaBasicExecutionRole
         - Statement:
             Effect: Allow
             Action:
