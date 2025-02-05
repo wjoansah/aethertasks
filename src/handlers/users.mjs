@@ -66,5 +66,5 @@ export const handler = async (event, context) => {
 }
 
 const generateTemporaryPassword = () => {
-    return crypto.randomBytes(16).toString("hex")
+    return crypto.randomBytes(64).toString("hex")
 }
