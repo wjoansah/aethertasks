@@ -435,6 +435,7 @@ Resources:
       Region: !Ref AWS::Region
       AdminEmail: !Ref AdminEmail
       PostConfirmationFuncArn: !GetAtt CognitoPostConfirmationFunction.Arn
+      Version: 1
 
   # Task Queue
   TaskQueue:
