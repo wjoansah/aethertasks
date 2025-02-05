@@ -96,12 +96,12 @@ const addInviteMessageTemplate = async (event, userPoolId, responseData, context
     const region = event.ResourceProperties.Region;
 
     const emailMessage = `Hello {username}, Welcome to AetherTasks!
-
+\n\n
 Your temporary password is {####}
-
-Click here to sign in:
+\n\n
+Click here to sign in:\n\n
 https://${domain}.auth.${region}.amazoncognito.com/login?client_id=${clientId}&response_type=code&redirect_uri=${frontendHost}
-
+\n\n
 Ensure to subscribe to the SNS topics`;
 
     await cognitoClient.send(new UpdateUserPoolCommand({
@@ -110,13 +110,13 @@ Ensure to subscribe to the SNS topics`;
             AllowAdminCreateUserOnly: true,
             InviteMessageTemplate: {
                 EmailMessage: emailMessage,
-                EmailSubject: 'Welcome to AetherTasks',
+                EmailSubject: 'Welcome to AetherTasks!',
             },
         },
     }));
 
-    console.log('UserPool updated successfully');
-    responseData.Message = 'UserPool updated successfully';
+    console.log('UserPool Invite Message updated successfully');
+    responseData.Message = 'UserPool Invite Message updated successfully';
 };
 
 // Function to send a response back to CloudFormation
