@@ -148,6 +148,7 @@ Resources:
         - Statement:
             Effect: Allow
             Action:
+              - cognito-idp:AdminAddUserToGroup
               - cognito-idp:AdminListGroupsForUser
             Resource: !GetAtt UserPool.Arn
         - Statement:
