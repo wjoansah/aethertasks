@@ -2,13 +2,10 @@ import {
     CognitoIdentityProviderClient,
     AdminGetUserCommand,
     AdminCreateUserCommand,
-    AdminAddUserToGroupCommand,
     UpdateUserPoolCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
-import {SNSClient, SubscribeCommand} from '@aws-sdk/client-sns';
 
 const cognitoClient = new CognitoIdentityProviderClient();
-const snsClient = new SNSClient();
 
 export const handler = async (event, context) => {
     const responseUrl = event.ResponseURL;
@@ -75,14 +72,6 @@ const createAdminUser = async (event, userPoolId, responseData, context) => {
             }
         }
     }
-};
-
-const subscribeToTopic = async (topicArn, endpoint) => {
-    await snsClient.send(new SubscribeCommand({
-        TopicArn: topicArn,
-        Protocol: 'email',
-        Endpoint: endpoint,
-    }));
 };
 
 const updateUserPoolLambdaConfig = async (userPoolId, postConfirmationFuncArn, responseData) => {

@@ -432,9 +432,6 @@ Resources:
       ProdFrontendUrl: !Ref ProdAuthCallbackUrl
       Region: !Ref AWS::Region
       AdminEmail: !Ref AdminEmail
-      AdminGroup: !Ref UserPoolAdminGroupName
-      TaskCompleteTopicArn: !Ref CompletedTaskNotificationTopic
-      ClosedTaskTopicArn: !Ref ClosedTasksNotificationTopic
       PostConfirmationFuncArn: !GetAtt CognitoPostConfirmationFunction.Arn
 
   # Task Queue
