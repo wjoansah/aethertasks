@@ -138,47 +138,6 @@ Resources:
       Precedence: 0
       UserPoolId: !Ref UserPool
 
-  CognitoPostConfirmationFunctionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: cognito-idp.amazonaws.com
-            Action:
-              sts:AssumeRole
-      Policies:
-        - PolicyName: CognitoUserGroupPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - cognito-idp:AdminAddUserToGroup
-                  - cognito-idp:AdminListGroupsForUser
-                Resource: !GetAtt UserPool.Arn
-        - PolicyName: CognitoUserGroupPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - states:StartExecution
-                Resource:
-                  - !GetAtt StepFunctionStateMachine.Arn
-
-  CognitoPostConfirmationFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: src/cognitoPostConfirmation.handler
-      Role: !GetAtt CognitoPostConfirmationFunctionRole.Arn
-      Environment:
-        Variables:
-          ADMIN_GROUP_NAME: !Ref UserPoolAdminGroupName
-          STATE_MACHINE_ARN: !Ref StepFunctionStateMachine
-
   # User Function
   UsersFunction:
     Type: AWS::Serverless::Function
@@ -189,6 +148,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref UserPool
           STATE_MACHINE_ARN: !Ref StepFunctionStateMachine
+          ADMIN_GROUP_NAME: !Ref UserPoolAdminGroupName
       Policies:
         - Statement:
             Effect: Allow
@@ -196,8 +156,15 @@ Resources:
               - cognito-idp:AdminCreateUser
               - cognito-idp:AdminSetUserPassword
               - cognito-idp:AdminListGroupsForUser
+              - cognito-idp:AdminAddUserToGroup
               - cognito-idp:ListUsers
             Resource: !GetAtt UserPool.Arn
+        - Statement:
+            Effect: Allow
+            Action:
+              - states:StartExecution
+            Resource:
+              - !GetAtt StepFunctionStateMachine.Arn
       Tags:
         Stack: !Sub "${AWS::StackName}"
       Events:
@@ -437,10 +404,9 @@ Resources:
         - Statement:
             Effect: Allow
             Action:
-              - sns:Subscribe
+              - states:StartExecution
             Resource:
-              - !Ref CompletedTaskNotificationTopic
-              - !Ref ClosedTasksNotificationTopic
+              - !GetAtt StepFunctionStateMachine.Arn
 
   StackCustomResource:
     Type: Custom::StackCustomResource
@@ -453,7 +419,7 @@ Resources:
       ProdFrontendUrl: !Ref ProdAuthCallbackUrl
       Region: !Ref AWS::Region
       AdminEmail: !Ref AdminEmail
-      PostConfirmationFuncArn: !GetAtt CognitoPostConfirmationFunction.Arn
+      StateMachineArn: !GetAtt StepFunctionStateMachine.Arn
       Version: 1
 
   # Task Queue

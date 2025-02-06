@@ -4,7 +4,9 @@ import {
     AdminCreateUserCommand,
     UpdateUserPoolCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
+import {SFNClient, StartExecutionCommand} from "@aws-sdk/client-sfn";
 
+const sfnClient = new SFNClient({});
 const cognitoClient = new CognitoIdentityProviderClient();
 
 export const handler = async (event, context) => {
@@ -18,10 +20,8 @@ export const handler = async (event, context) => {
             return;
         }
 
-        const userPoolId = event.ResourceProperties.UserPoolId;
-
         await updateUserPoolConfig(event, responseData)
-        await createAdminUser(event, userPoolId, responseData, context);
+        await createAdminUser(event, responseData, context);
 
     } catch (error) {
         status = 'FAILED';
@@ -33,8 +33,9 @@ export const handler = async (event, context) => {
     }
 };
 
-const createAdminUser = async (event, userPoolId, responseData, context) => {
+const createAdminUser = async (event, responseData, context) => {
     const adminEmail = event.ResourceProperties.AdminEmail;
+    const userPoolId = event.ResourceProperties.UserPoolId;
 
     if (adminEmail && adminEmail.trim() !== 'None') {
         try {
@@ -63,6 +64,8 @@ const createAdminUser = async (event, userPoolId, responseData, context) => {
                     DesiredDeliveryMediums: ['EMAIL'],
                 }));
 
+                await startUserOnboarding(event, adminEmail)
+
                 console.log('Admin created successfully');
                 responseData.Message = 'Admin created successfully';
             } else {
@@ -72,9 +75,25 @@ const createAdminUser = async (event, userPoolId, responseData, context) => {
     }
 };
 
+const startUserOnboarding = async (event, userEmail) => {
+    const stateMachineArn = event.ResourceProperties.StateMachineArn
+    const input = `{"workflowType":"admin-onboarding","userEmail":"${userEmail}"}"}`
+
+    const command = new StartExecutionCommand({
+        stateMachineArn,
+        input
+    })
+
+    try {
+        await sfnClient.send(command)
+    } catch (error) {
+        console.error(error)
+    }
+}
+
+
 const updateUserPoolConfig = async (event, responseData) => {
     const userPoolId = event.ResourceProperties.UserPoolId;
-    const postConfirmationFuncArn = event.ResourceProperties.PostConfirmationFuncArn
 
     const domain = event.ResourceProperties.UserPoolDomain;
     const clientId = event.ResourceProperties.UserPoolClient;
@@ -104,9 +123,6 @@ AetherTasks Team.
                 EmailSubject: 'Welcome to AetherTasks!',
             },
         },
-        LambdaConfig: {
-            PostConfirmation: postConfirmationFuncArn
-        }
     }))
 
     console.log('UserPool Config updated successfully');
