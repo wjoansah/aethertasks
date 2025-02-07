@@ -55,7 +55,7 @@ const buildPublishCommandParams = (eventType, payload) => {
                 message = `Hello ${task.responsibility},\nYou have been assigned a new task: "${task.name}".\nDescription: ${task.description}\nDue Date: ${new Date(task.deadline).toLocaleString()}\nPlease log in to your account to view and manage this task.\nBest Regards,\n AetherTasks Team`;
             }
 
-            if (statusHasChanged(task, oldTask) && (oldTask.status === "closed" || oldTask.status === "expired")) {
+            if (statusHasChanged(task, oldTask) && oldTask && (oldTask.status === "closed" || oldTask.status === "expired")) {
                 return {
                     TopicArn: REOPENED_TASK_TOPIC_ARN,
                     Subject: "Task Reopened",
