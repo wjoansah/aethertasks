@@ -7,11 +7,18 @@ export const handler = async (event) => {
     const email = event['Email']
 
     console.log(`Subscribing ${email} to ${topicArn}`)
+    const filterPolicies = {
+        responsibility: email,
+        email
+    }
 
     const params = {
         Protocol: "email",
         TopicArn: topicArn,
         Endpoint: email,
+        Attributes: {
+            FilterPolicy: JSON.stringify(filterPolicies),
+        }
     }
 
     try {

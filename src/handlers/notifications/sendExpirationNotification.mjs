@@ -20,17 +20,17 @@ export const handler = async (event) => {
                     Subject: "Task Expired",
                     Message: message,
                     MessageAttributes: {
-                        userEmail: {DataType: "String", StringValue: email},
+                        email: {DataType: "String", StringValue: email},
                     },
                 })
             );
         };
 
 
-        await notifyUser(responsibility, `<!doctypehtml><meta charset=UTF-8><title>Task Expired</title><body style=font-family:Arial,sans-serif;line-height:1.6;color:#333><p>The task <strong>"${taskName}"</strong> has expired.<p>Please take the necessary actions to address this.<p>Best Regards,<br><strong>AetherTasks Team</strong>`);
+        await notifyUser(responsibility, `The task "${taskName}" has expired.\n\nPlease take the necessary actions to address this.\n\nBest Regards,\nAetherTasks Team`);
 
         for (const email in adminEmails) {
-            await notifyUser(email, `<!doctypehtml><meta charset=UTF-8><title>Task Expired</title><body style=font-family:Arial,sans-serif;line-height:1.6;color:#333><p>The task <strong>"${taskName}"</strong> assigned to <strong>${responsibility}</strong> has expired.<p>Please take the necessary actions to address this.<p>Best Regards,<br><strong>AetherTasks Team</strong>`);
+            await notifyUser(email, `The task "${taskName}" assigned to ${responsibility} has expired.\n\nPlease take the necessary actions to address this.\n\nBest Regards,\nAetherTasks Team`);
         }
     } catch (err) {
         console.error(err);
