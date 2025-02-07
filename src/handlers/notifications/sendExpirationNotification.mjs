@@ -14,6 +14,7 @@ export const handler = async (event) => {
     try {
         const adminEmails = await getUsersInAdminGroup()
         const notifyUser = async (email, message) => {
+            console.log(`Sending expiration notification to ${email}`)
             await snsClient.send(
                 new PublishCommand({
                     TopicArn: closedTopicArn,
