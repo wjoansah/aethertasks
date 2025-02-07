@@ -8,7 +8,6 @@ export const handler = async (event) => {
 
     console.log(`Subscribing ${email} to ${topicArn}`)
     const filterPolicies = {
-        responsibility: [email],
         email: [email]
     }
 

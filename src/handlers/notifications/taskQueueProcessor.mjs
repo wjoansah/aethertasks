@@ -61,7 +61,7 @@ const buildPublishCommandParams = (eventType, payload) => {
                     Subject: "Task Reopened",
                     Message: message,
                     MessageAttributes: {
-                        responsibility: {
+                        email: {
                             DataType: "String",
                             StringValue: task.responsibility,
                         }
@@ -74,7 +74,7 @@ const buildPublishCommandParams = (eventType, payload) => {
                 Subject: subject,
                 Message: message,
                 MessageAttributes: {
-                    responsibility: {
+                    email: {
                         DataType: "String",
                         StringValue: task.responsibility,
                     }
@@ -87,7 +87,7 @@ const buildPublishCommandParams = (eventType, payload) => {
                     Subject: "Task Updates - Task Closed",
                     Message: `Hello ${task.responsibility},\n\nThe task "${task.name}" has been closed.\n\nFor more information, please log in to your account.\n\nBest Regards,\nAetherTasks Team`,
                     MessageAttributes: {
-                        responsibility: {
+                        email: {
                             DataType: "String",
                             StringValue: task.responsibility,
                         }
