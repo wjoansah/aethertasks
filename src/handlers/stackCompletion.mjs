@@ -100,19 +100,7 @@ const updateUserPoolConfig = async (event, responseData) => {
     const frontendHost = event.ResourceProperties.ProdFrontendUrl;
     const region = event.ResourceProperties.Region;
 
-    const emailMessage = `Hello {username}, Welcome to AetherTasks!
-\n\n
-Your temporary password is {####}
-\n\n
-Click here to sign in:
-\n\n
-https://${domain}.auth.${region}.amazoncognito.com/login?client_id=${clientId}&response_type=code&redirect_uri=${frontendHost}
-\n\n
-Ensure to subscribe to the SNS topics
-\n\n
-Best Regards,
-AetherTasks Team.
-`;
+    const emailMessage = `<!doctypehtml><meta charset=UTF-8><title>Welcome to AetherTasks</title><body style=font-family:Arial,sans-serif;line-height:1.6;color:#333><p>Hello {username},<p>Welcome to <strong>AetherTasks</strong>! We're excited to have you on board.<p><strong>Your temporary password:</strong> <code>{####}</code><p>To get started, sign in using the link below:<p><a href="https://${domain}.auth.${region}.amazoncognito.com/login?client_id=${clientId}&response_type=code&redirect_uri=${frontendHost}"style="display:inline-block;padding:10px 15px;background-color:#007bff;color:#fff;text-decoration:none;border-radius:5px">Sign In</a><p>For the best experience, ensure you subscribe to email notifications.<p>If you have any questions, feel free to reach out to our support team.<p>Best Regards,<br><strong>AetherTasks Team</strong>`;
 
     await cognitoClient.send(new UpdateUserPoolCommand({
         UserPoolId: userPoolId,
