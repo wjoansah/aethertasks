@@ -41,7 +41,7 @@ export const handler = async (event) => {
                 new PublishCommand({
                     TopicArn: taskDeadlineTopicArn,
                     Subject: `Task Deadline - ${item.name}`,
-                    Message: `Task "${item.name}" is due in 1 hour.`,
+                    Message: `Task "${item.name}" is due in 1 hour.\n\nPlease take the necessary actions to address this.\n\nBest Regards,\nAetherTasks Team`,
                     MessageAttributes: {
                         responsibility: {
                             DataType: "String",
