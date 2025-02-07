@@ -88,11 +88,11 @@ const generateTemporaryPassword = () => {
 const startUserOnboarding = async (role, userEmail) => {
     const onBoardingType = role.toLowerCase() === 'admin' ? 'admin-' : ''
     const input = `{"workflowType":"${onBoardingType}onboarding","userEmail":"${userEmail}"}"}`
-    const params = {
+
+    const command = new StartExecutionCommand({
         stateMachineArn: STATE_MACHINE_ARN,
         input
-    }
-    const command = new StartExecutionCommand(params)
+    })
 
     try {
         await sfnClient.send(command)
