@@ -7,7 +7,6 @@ export const handler = async (event) => {
     for (const record of event.Records) {
         console.log(record)
         const task = unmarshall(record.dynamodb.NewImage);
-        const oldTask = unmarshall(record.dynamodb.OldImage);
 
         if (record.eventName === "INSERT") {
             console.log("New task created:", task);
@@ -23,6 +22,7 @@ export const handler = async (event) => {
 
         if (record.eventName === "MODIFY") {
             console.log("task updated:", task);
+            const oldTask = unmarshall(record.dynamodb.OldImage);
 
             const params = {
                 QueueUrl: process.env.TASK_QUEUE_URL,
