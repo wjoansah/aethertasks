@@ -1,4 +1,5 @@
 import {SNSClient, PublishCommand} from "@aws-sdk/client-sns"
+import {unmarshall} from "@aws-sdk/util-dynamodb";
 
 const snsClient = new SNSClient();
 
@@ -10,7 +11,8 @@ const REOPENED_TASK_TOPIC_ARN = process.env.REOPENED_TASK_TOPIC_ARN;
 export const handler = async (event) => {
     for (const record of event.Records) {
         const payload = JSON.parse(record.body);
-        const {task} = payload;
+        let {task} = payload;
+        task = unmarshall(task)
         console.log("Processing task:", task);
 
         const params = buildPublishCommandParams(`task.${task.status.toLowerCase()}`, payload)
