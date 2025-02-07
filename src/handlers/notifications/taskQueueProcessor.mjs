@@ -111,5 +111,6 @@ const buildPublishCommandParams = (eventType, payload) => {
 }
 
 const statusHasChanged = (task, oldTask) => {
-    return task.status !== oldTask.status;
+    console.log("Comparing statuses:", oldTask.status, "vs", task.status);
+    return oldTask.status !== task.status;
 }
