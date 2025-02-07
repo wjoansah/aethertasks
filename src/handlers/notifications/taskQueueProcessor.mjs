@@ -52,10 +52,14 @@ const buildPublishCommandParams = (eventType, payload) => {
 
             if (operation === "INSERT") {
                 subject = "New Task Assigned";
-                message = `Hello ${task.responsibility},\nYou have been assigned a new task: "${task.name}".\nDescription: ${task.description}\nDue Date: ${new Date(task.deadline).toLocaleString()}\nPlease log in to your account to view and manage this task.\nBest Regards,\n AetherTasks Team`;
+                message = `Hello ${task.responsibility},\n\nYou have been assigned a new task: "${task.name}".\nDescription: ${task.description}\nDue Date: ${new Date(task.deadline).toLocaleString()}\n\nPlease log in to your account to view and manage this task.\n\nBest Regards,\n AetherTasks Team`;
             }
 
-            if (statusHasChanged(task, oldTask) && oldTask && (oldTask.status === "closed" || oldTask.status === "expired")) {
+            if (
+                oldTask?.status &&
+                (oldTask.status === "closed" || oldTask.status === "expired") &&
+                statusHasChanged(task, oldTask)
+            ) {
                 return {
                     TopicArn: REOPENED_TASK_TOPIC_ARN,
                     Subject: "Task Reopened",
