@@ -621,7 +621,8 @@ Resources:
       Environment:
         Variables:
           TASK_CLOSED_TOPIC_ARN: !Ref ClosedTasksNotificationTopic
-          ADMIN_EMAIL: !Ref AdminEmail
+          ADMIN_GROUP_NAME: !Ref UserPoolAdminGroupName
+          USER_POOL_ID: !Ref UserPool
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
@@ -633,6 +634,11 @@ Resources:
               - sns:SetSubscriptionAttributes
             Resource:
               - !Ref ClosedTasksNotificationTopic
+        - Statement:
+            Effect: Allow
+            Action:
+              - cognito-idp:ListUsersInGroup
+            Resource: !GetAtt UserPool.Arn
 
   # Step Function Role
   StepFunctionsRole:
