@@ -4,25 +4,30 @@ import {unmarshall} from "@aws-sdk/util-dynamodb";
 const sqsClient = new SQSClient();
 
 export const handler = async (event) => {
-    const messages = event.Records.map((record) => {
-        console.log("Processing record:", record);
+    for (const record of event.Records) {
+        console.log("Processing record:", JSON.stringify(record, null, 2));
 
         if (record.eventName === "REMOVE") {
             console.log(`Skipping DELETE event for task ID ${record.dynamodb.Keys?.id.S}`);
-            return null; // Ignore deleted tasks
+            continue
         }
 
-        const task = record.dynamodb.NewImage ? unmarshall(record.dynamodb.NewImage) : null;
-        const oldTask = record.dynamodb.OldImage ? unmarshall(record.dynamodb.OldImage) : null;
-        const operation = record.eventName;
+        try {
+            const task = record.dynamodb.NewImage ? unmarshall(record.dynamodb.NewImage) : null;
+            const oldTask = record.dynamodb.OldImage ? unmarshall(record.dynamodb.OldImage) : null;
+            const operation = record.eventName;
 
-        const params = {
-            QueueUrl: process.env.TASK_QUEUE_URL,
-            MessageBody: JSON.stringify({ task, operation, oldTask }),
-        };
+            console.log('task: ', task)
+            console.log('old task: ', oldTask)
 
-        return sqsClient.send(new SendMessageCommand(params));
-    });
+            const params = {
+                QueueUrl: process.env.TASK_QUEUE_URL,
+                MessageBody: JSON.stringify({task, operation, oldTask}),
+            };
 
-    await Promise.all(messages.filter(Boolean)); // Filter out nulls and send messages concurrently
+            await sqsClient.send(new SendMessageCommand(params));
+        } catch (error) {
+            console.error(error);
+        }
+    }
 };
