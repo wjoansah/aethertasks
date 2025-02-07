@@ -3,6 +3,7 @@ import {
     AdminGetUserCommand,
     AdminCreateUserCommand,
     UpdateUserPoolCommand,
+    AdminAddUserToGroupCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import {SFNClient, StartExecutionCommand} from "@aws-sdk/client-sfn";
 
@@ -65,6 +66,12 @@ const createAdminUser = async (event, responseData, context) => {
                 }));
 
                 await startUserOnboarding(event, adminEmail)
+
+                await cognitoClient.send(new AdminAddUserToGroupCommand({
+                    UserPoolId: userPoolId,
+                    Username: adminEmail,
+                    GroupName: event.ResourceProperties.AdminGroupName,
+                }))
 
                 console.log('Admin created successfully');
                 responseData.Message = 'Admin created successfully';

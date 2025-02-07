@@ -419,6 +419,7 @@ Resources:
       ProdFrontendUrl: !Ref ProdAuthCallbackUrl
       Region: !Ref AWS::Region
       AdminEmail: !Ref AdminEmail
+      AdminGroupName: !Ref UserPoolAdminGroupName
       StateMachineArn: !GetAtt StepFunctionStateMachine.Arn
       Version: 1
 
