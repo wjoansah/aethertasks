@@ -48,11 +48,11 @@ const buildPublishCommandParams = (eventType, payload) => {
     switch (eventType) {
         case "task.open":
             let subject = "Task Updates"
-            let message = `<!doctypehtml><meta charset=UTF-8><title>Task Details</title><body style=font-family:Arial,sans-serif;line-height:1.6;color:#333><h3>Task Details:</h3><p><strong>Name:</strong> ${task.name}<p><strong>Deadline:</strong> ${new Date(task.deadline).toLocaleString()}`
+            let message = `Task Details:\nName: ${task.name}\nDeadline: ${new Date(task.deadline).toLocaleString()}`;
 
             if (operation === "INSERT") {
                 subject = "New Task Assigned";
-                message = `<!doctypehtml><meta charset=UTF-8><title>New Task Assigned</title><body style=font-family:Arial,sans-serif;line-height:1.6;color:#333><p>Hello ${task.responsibility},<p>You have been assigned a new task: <strong>\"${task.name}\"</strong>.<p><strong>Description:</strong> ${task.description}<p><strong>Due Date:</strong> ${new Date(task.deadline).toLocaleString()}<p>Please log in to your account to view and manage this task.<p>Best Regards,<br><strong>AetherTasks Team</strong>`;
+                message = `Hello ${task.responsibility},\nYou have been assigned a new task: "${task.name}".\nDescription: ${task.description}\nDue Date: ${new Date(task.deadline).toLocaleString()}\ Please log in to your account to view and manage this task.\nBest Regards,\n AetherTasks Team`;
             }
 
             if (statusHasChanged(task, oldTask) && (oldTask.status === "closed" || oldTask.status === "expired")) {
@@ -85,7 +85,7 @@ const buildPublishCommandParams = (eventType, payload) => {
                 return {
                     TopicArn: TASK_CLOSED_TOPIC_ARN,
                     Subject: "Task Updates - Task Closed",
-                    Message: `<!doctypehtml><meta charset=UTF-8><title>Task Closed</title><body style=font-family:Arial,sans-serif;line-height:1.6;color:#333><p>Hello ${task.responsibility},<p>The task <strong>"${task.name}"</strong> has been closed.<p>For more information, please log in to your account.<p>Best Regards,<br><strong>AetherTasks Team</strong>`,
+                    Message: `Hello ${task.responsibility},\n\nThe task "${task.name}" has been closed.\n\nFor more information, please log in to your account.\n\nBest Regards,\nAetherTasks Team`,
                     MessageAttributes: {
                         responsibility: {
                             DataType: "String",
@@ -100,7 +100,7 @@ const buildPublishCommandParams = (eventType, payload) => {
                 return {
                     TopicArn: TASK_COMPLETED_ARN,
                     Subject: "Task Updates - Task Completed",
-                    Message: `<!doctypehtml><meta charset=UTF-8><title>Task Completed</title><body style=font-family:Arial,sans-serif;line-height:1.6;color:#333><p>Dear AetherTasks Admin,<p>The task <strong>"${task.name}"</strong> has been marked as completed by <strong>${task.responsibility}</strong>.<p><strong>Completion Date:</strong> ${task.completedAt}<p>You can review the details of this task in your account.<p>Best Regards,<br><strong>AetherTasks Team</strong>`,
+                    Message: `Dear AetherTasks Admin,\n\nThe task "${task.name}" has been marked as completed by ${task.responsibility}.\n\nCompletion Date: ${task.completedAt}\n\nYou can review the details of this task in your account.\n\nBest Regards,\nAetherTasks Team`,
                 }
             }
             break;
