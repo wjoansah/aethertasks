@@ -16,10 +16,7 @@ export const handler = async (event) => {
         const params = buildPublishCommandParams(`task.${task.status.toLowerCase()}`, payload)
         if (!params) {
             console.log("nothing to send returning...")
-            return {
-                statusCode: 204,
-                body: JSON.stringify({message: "nothing to do"})
-            }
+            continue;
         }
 
         try {
@@ -52,7 +49,7 @@ const buildPublishCommandParams = (eventType, payload) => {
 
             if (operation === "INSERT") {
                 subject = "New Task Assigned";
-                message = `Hello ${task.responsibility},\nYou have been assigned a new task: "${task.name}".\nDescription: ${task.description}\nDue Date: ${new Date(task.deadline).toLocaleString()}\ Please log in to your account to view and manage this task.\nBest Regards,\n AetherTasks Team`;
+                message = `Hello ${task.responsibility},\nYou have been assigned a new task: "${task.name}".\nDescription: ${task.description}\nDue Date: ${new Date(task.deadline).toLocaleString()}\nPlease log in to your account to view and manage this task.\nBest Regards,\n AetherTasks Team`;
             }
 
             if (statusHasChanged(task, oldTask) && (oldTask.status === "closed" || oldTask.status === "expired")) {
@@ -106,11 +103,12 @@ const buildPublishCommandParams = (eventType, payload) => {
             break;
         default:
             console.warn(`Received an event of type ${eventType} which is not implemented`);
-            break;
+            return null
     }
 }
 
 const statusHasChanged = (task, oldTask) => {
     console.log("Comparing statuses:", oldTask.status, "vs", task.status);
+    if (!oldTask) return true
     return oldTask.status !== task.status;
 }
