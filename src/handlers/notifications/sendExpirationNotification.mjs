@@ -30,7 +30,7 @@ export const handler = async (event) => {
 
         await notifyUser(responsibility, `The task "${taskName}" has expired.\n\nPlease take the necessary actions to address this.\n\nBest Regards,\nAetherTasks Team`);
 
-        for (const email in adminEmails) {
+        for (const email of adminEmails) {
             await notifyUser(email, `The task "${taskName}" assigned to ${responsibility} has expired.\n\nPlease take the necessary actions to address this.\n\nBest Regards,\nAetherTasks Team`);
         }
     } catch (err) {
@@ -39,13 +39,24 @@ export const handler = async (event) => {
 }
 
 const getUsersInAdminGroup = async () => {
-    const result = await cognitoClient.send(new ListUsersInGroupCommand({
-        GroupName: adminGroupName,
-        UserPoolId: userPoolId,
-    }))
+    const allEmails = [];
+    let nextToken = undefined;
 
-    return result.Users.map(user => {
-        const emailAttribute = user.Attributes.find((attr) => attr.Name === "email")
-        return emailAttribute.Value
-    })
-}
+    do {
+        const result = await cognitoClient.send(new ListUsersInGroupCommand({
+            GroupName: adminGroupName,
+            UserPoolId: userPoolId,
+            NextToken: nextToken,
+            Limit: 60,
+        }));
+
+        const emails = result.Users
+            .map(user => user.Attributes.find(attr => attr.Name === "email")?.Value)
+            .filter(email => email !== undefined);
+
+        allEmails.push(...emails);
+        nextToken = result.NextToken;
+    } while (nextToken);
+
+    return allEmails;
+};
