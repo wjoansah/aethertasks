@@ -6,7 +6,7 @@ const closedTopicArn = process.env.TASK_CLOSED_TOPIC_ARN
 const snsClient = new SNSClient({})
 
 export const handler = async (event) => {
-    const {TaskId: taskId, Responsibility: responsibility} = event
+    const {Responsibility: responsibility, TaskName: taskName} = event
     try {
         const notifyUser = async (email, message) => {
             await snsClient.send(
@@ -21,10 +21,9 @@ export const handler = async (event) => {
             );
         };
 
-        const message = `Task ${taskId} has expired.`;
 
-        await notifyUser(responsibility, message);
-        await notifyUser(adminEmail, `Task ${taskId} assigned to ${Responsibility} has expired.`);
+        await notifyUser(responsibility, `<!doctypehtml><meta charset=UTF-8><title>Task Expired</title><body style=font-family:Arial,sans-serif;line-height:1.6;color:#333><p>The task <strong>"${taskName}"</strong> has expired.<p>Please take the necessary actions to address this.<p>Best Regards,<br><strong>AetherTasks Team</strong>`);
+        await notifyUser(adminEmail, `<!doctypehtml><meta charset=UTF-8><title>Task Expired</title><body style=font-family:Arial,sans-serif;line-height:1.6;color:#333><p>The task <strong>"${taskName}"</strong> assigned to <strong>${responsibility}</strong> has expired.<p>Please take the necessary actions to address this.<p>Best Regards,<br><strong>AetherTasks Team</strong>`);
     } catch (err) {
         console.error(err);
     }
