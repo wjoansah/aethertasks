@@ -11,7 +11,7 @@ const REOPENED_TASK_TOPIC_ARN = process.env.REOPENED_TASK_TOPIC_ARN;
 export const handler = async (event) => {
     for (const record of event.Records) {
         const payload = JSON.parse(record.body);
-        const task = unmarshall(payload.task)
+        const task = payload.task
 
         console.log("Processing task:", task);
 
@@ -43,8 +43,7 @@ export const handler = async (event) => {
 }
 
 const buildPublishCommandParams = (eventType, payload) => {
-    const {task, operation} = payload;
-    const oldTask = unmarshall(payload.oldTask)
+    const {task, operation, oldTask} = payload;
 
     switch (eventType) {
         case "task.open":
