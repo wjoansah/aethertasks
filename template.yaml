@@ -487,11 +487,7 @@ Resources:
     Properties:
       Handler: src/handlers/notifications/taskQueueProcessor.handler
       Policies:
-        - SQSPollerPolicy:
-            QueueName: !GetAtt TaskQueue.QueueName
-        - SNSPublishMessagePolicy:
-            TopicName: !Ref TasksAssignedNotificationTopic
-        - AWSLambdaBasicExecutionRole
+        - AWSLambdaSQSQueueExecutionRole
         - Statement:
             Effect: Allow
             Action:
