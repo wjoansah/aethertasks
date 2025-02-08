@@ -1,6 +1,6 @@
 import {SNSClient, PublishCommand} from "@aws-sdk/client-sns";
 import {DynamoDBClient} from "@aws-sdk/client-dynamodb";
-import {DynamoDBDocumentClient, ScanCommand} from "@aws-sdk/lib-dynamodb";
+import {DynamoDBDocumentClient, ScanCommand, UpdateCommand} from "@aws-sdk/lib-dynamodb";
 
 const snsClient = new SNSClient();
 const ddbClient = new DynamoDBClient();
@@ -19,14 +19,16 @@ export const handler = async (event) => {
         const result = await ddbDocClient.send(
             new ScanCommand({
                 TableName: tableName,
-                FilterExpression: "deadline BETWEEN :now AND :oneHourLater AND #status = :open",
+                FilterExpression: "deadline BETWEEN :now AND :oneHourLater AND #status = :open AND (attribute_not_exists(#processed) OR #processed <> :processed)",
                 ExpressionAttributeNames: {
                     "#status": "status",
+                    "#processed": "processedDeadlineNotification",
                 },
                 ExpressionAttributeValues: {
                     ":now": currentTime,
                     ":oneHourLater": oneHourLater,
                     ":open": "open",
+                    ":processed": true,
                 },
             })
         );
@@ -50,6 +52,15 @@ export const handler = async (event) => {
                     },
                 })
             );
+
+            await ddbDocClient.send(new UpdateCommand({
+                TableName: tableName,
+                Key: {id: item.id},
+                UpdateExpression: 'SET processedDeadlineNotification = :val',
+                ExpressionAttributeValues: {
+                    ":val": true,
+                }
+            }))
 
             console.log(`Notification sent for task: ${item.name}`);
         }

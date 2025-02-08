@@ -546,6 +546,7 @@ Resources:
             Effect: Allow
             Action:
               - "dynamodb:Scan"
+              - "dynamodb:UpdateItem"
             Resource:
               - !GetAtt TaskTable.Arn
         - Statement:
