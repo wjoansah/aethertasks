@@ -55,6 +55,11 @@ const buildPublishCommandParams = (eventType, payload) => {
                 message = `Hello ${task.responsibility},\n\nYou have been assigned a new task: "${task.name}".\nDescription: ${task.description}\nDue Date: ${new Date(task.deadline).toLocaleString()}\n\nPlease log in to your account to view and manage this task.\n\nBest Regards,\n AetherTasks Team`;
             }
 
+            // ignore processedDeadlineNotification updates
+            if (task.processedDeadlineNotification) {
+                return null
+            }
+
             if (
                 oldTask?.status &&
                 (oldTask.status === "closed" || oldTask.status === "expired") &&
