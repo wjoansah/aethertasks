@@ -32,6 +32,10 @@ export const handler = async (event) => {
             expressionAttributeValues[':completedAt'] = new Date().toISOString();
         }
 
+        updateExpression += ` #processedDeadline = :processedDeadLineNotification,`;
+        expressionAttributeNames['#processedDeadline'] = 'processedDeadLineNotification';
+        expressionAttributeValues[':processedDeadLineNotification'] = false;
+
         // Remove trailing comma
         updateExpression = updateExpression.slice(0, -1);
 
